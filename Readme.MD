@@ -3,7 +3,7 @@
 
 ###### This is a text based game/bot. There is no graphical interface.
 
-### Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.1
+### Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/latest
 
 ### THEAIGAMES INSTALLATION:
 
@@ -20,9 +20,9 @@ The game will run 100 times in a row with the settings you choose at startup
 
 ##### Version History:
 
-###### Version 1.0.0 (2016-03-08)
+###### Version 1.0.1 (2016-03-08)
 
-Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.1
+Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/latest
 
 ##### My Personal Github:
 

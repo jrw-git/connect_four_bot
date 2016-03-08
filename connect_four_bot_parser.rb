@@ -1,13 +1,19 @@
 #!/usr/bin/env ruby
+# -*- coding: utf-8 -*-
 
 # bot for theaigames.com
 # connect 4
 # written by John White 2016
 
 #require_relative "./lib/connect_four_engine"
-require_relative "./lib/connect_four_gameboard"
-require_relative "./lib/node"
-require_relative "./lib/ai_player"
+#require "./lib/connect_four_gameboard"
+require_relative "lib/connect_four_gameboard"
+#require "./lib/node"
+require_relative "lib/node"
+#require "./lib/ai_player"
+require_relative "lib/ai_player"
+
+STDOUT.sync = true
 
 class BotParser
 
@@ -24,7 +30,7 @@ class BotParser
 
   def run
     # look for commands from the server
-    while true
+    while !$stdin.closed?
       next_line = $stdin.readline
       # skip to next iteration unless we get a line
       next unless next_line
@@ -75,5 +81,7 @@ class BotParser
 
 end
 
-new_bot_parser = BotParser.new
-new_bot_parser.run
+if __FILE__ == $0
+  new_bot_parser = BotParser.new
+  new_bot_parser.run
+end
