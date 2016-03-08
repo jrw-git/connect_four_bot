@@ -5,6 +5,9 @@ ehthumbs.db
 # game logs
 *.txt
 
+# game executable
+*.exe
+
 # Folder config file
 Desktop.ini
 

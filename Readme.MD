@@ -3,7 +3,7 @@
 
 ###### This is a text based game/bot. There is no graphical interface.
 
-### Release 1.0.0: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.0
+### Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.1
 
 ### THEAIGAMES INSTALLATION:
 
@@ -12,26 +12,17 @@ the "connect_four_bot_parser.rb"
 
 ### LOCAL INSTALLATION:
 
-To run the game locally, Ruby or JRuby must be installed.
+Download the executable from the release page.
 
-Navigate to the "lib" directory and run "ruby connect_four_engine.rb"
+Run "connect_four_engine.exe"
 
-The game will iterate infinitely with the settings you choose at startup
-
-It will log wins/losses/draws/games played in the log file you specify.
-
-### BOT TESTING:
-
-Some of the output from running the connect_four_engine.rb script can be pasted
-into a window running the bot script. Namely, anything with "settings",
-or "update", or "action". "action move #{somenumber}" prompts the bot to act.
-
+The game will run 100 times in a row with the settings you choose at startup
 
 ##### Version History:
 
 ###### Version 1.0.0 (2016-03-08)
 
-Release 1.0.0: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.0
+Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/tag/1.0.1
 
 ##### My Personal Github:
 
