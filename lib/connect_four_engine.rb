@@ -21,7 +21,9 @@ class ConnectFourEngine
     @next_player = p2
     #@current_player = self.setup_player(GameBoard::PlayerOneSymbol)
     #@next_player = self.setup_player(GameBoard::PlayerTwoSymbol)
-    puts @board.get_aigames_setup(@current_player.piece) + "\n"
+    if false
+      puts @board.get_aigames_setup(@current_player.piece) + "\n"
+    end
   end
 
   # THE HEURISTIC DOESN'T WORK PROPERLY
@@ -32,7 +34,7 @@ class ConnectFourEngine
   def run_game
     end_of_game = false
     until end_of_game
-      puts "#{@current_player}'s turn'"
+      puts "Turn: #{@current_player} #{@current_player.piece}"
       end_of_game = next_move(@current_player)
       @current_player = swap_players
     end
@@ -41,8 +43,10 @@ class ConnectFourEngine
 
   def next_move(player)
     @board.print_me
-    puts @board.get_aigames_update
-    puts "action move 10000\n\n"
+    if false
+      puts @board.get_aigames_update
+      puts "action move 10000\n\n"
+    end
     player_move = player.make_a_move(@board)
     @board.place_piece_in_column(player_move, player.piece)
     puts
@@ -52,16 +56,31 @@ class ConnectFourEngine
       else
         log_game_results(0, 1, 0, 1) if @log_enabled
       end
+      puts '=' * 50
+      puts "Final Game Board:"
+      puts '=' * 50
       @board.print_me
-      puts "Congrats! #{player} won!"
+      puts '=' * 50
+      puts "Congrats! #{player} #{player.piece} won!"
+      puts "Pausing for 5 seconds, then proceeding (or exiting)"
+      puts '=' * 50
+      sleep(5)
       return true
     end
     if @board.is_there_a_tie?
       log_game_results(0, 0, 1, 1) if @log_enabled
+      puts '=' * 50
+      puts "Final Game Board:"
+      puts '=' * 50
       @board.print_me
+      puts '=' * 50
       puts "Tied game."
+      puts "Pausing for 5 seconds, then proceeding (or exiting)"
+      puts '=' * 50
+      sleep(5)
       return true
     end
+
   end
 
   def log_game_results(p1_wins_add, p2_wins_add, draws_add, total_games_add)
@@ -100,9 +119,17 @@ class ConnectFourEngine
     if choice == 'y'
       return PlayerHuman.new("Human", player_symbol)
     elsif choice == 'n'
-      print "Do you want a (m)ixed Monte Carlo/Negamax AI or a pure (n)egamax-deep-iterating AI? (m/n): "
+      puts "How long will you let the AI think for? The higher the number the better the performance."
+      print "Enter number of seconds (0.5 minimum): "
+      time_to_iterate = $stdin.gets.chomp.to_f
+      if time_to_iterate < 0.5
+        time_to_iterate = 0.5
+      end
+      puts "Letting AI think for #{time_to_iterate} seconds per turn."
+      #print "Do you want a (m)ixed Monte Carlo/Negamax AI or a pure (n)egamax-deep-iterating AI? (m/n): "
+      print "Do you want an (e)asy AI that searches 2 moves ahead, or a (h)ard AI? (e/h): "
       choice = $stdin.gets.chomp
-      if choice == 'm'
+      if choice == 'h'
         monte_carlo = true
         use_deep_iteration = false
         return Player.new("AI Monte Carlo", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
@@ -110,10 +137,10 @@ class ConnectFourEngine
         monte_carlo = false
         use_deep_iteration = true
         return Player.new("AI Nega-Deep", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
-      elsif choice == 's'
+      elsif choice == 'e'
         monte_carlo = false
         use_deep_iteration = false
-        return Player.new("AI Nega-Simple", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
+        return Player.new("AI Negamax-Simple", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
       else
         setup_player(player_symbol)
       end
@@ -136,8 +163,14 @@ class ConnectFourEngine
 
 end
 
+puts "Welcome to Connect Four - Game and AI/bot"
+puts "Written 2016 by John White"
+puts "You can play against two different AI/bots, or play vs another human."
+#puts "Results are logged to a log file so that AI vs AI matches can run infinitely."
+puts "To exit, hit control-c or close the window. By default 100 games will occur."
+
 log_name = nil
-if true
+if false
   print "Enter log file (.txt added): "
   log_name = $stdin.gets.chomp
   log_name += ".txt"
@@ -146,7 +179,7 @@ end
 
 p1 = ConnectFourEngine.setup_player(GameBoard::PlayerOneSymbol)
 p2 = ConnectFourEngine.setup_player(GameBoard::PlayerTwoSymbol)
-number_runs = 1000
+number_runs = 100
 (1..number_runs).each do |x|
   connect_four_game = ConnectFourEngine.new(log_name, p1, p2)
 
