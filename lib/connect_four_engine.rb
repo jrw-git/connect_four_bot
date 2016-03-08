@@ -1,7 +1,7 @@
-require "./ai_player"
-require "./human_player"
-require "./connect_four_gameboard"
-require "./node"
+require_relative "ai_player"
+require_relative "human_player"
+require_relative "connect_four_gameboard"
+require_relative "node"
 
 class ConnectFourEngine
 
