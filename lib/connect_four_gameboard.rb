@@ -57,6 +57,9 @@ class GameBoard
     if @turns < 7
       return false
     end
+    if @last_move["width"] == nil
+      return false
+    end
     win = false
     win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, 0, 1))
     win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, 1, 0))
@@ -81,7 +84,7 @@ class GameBoard
     @board[height][width] = gamepiece
   end
 
-  def place_piece_in_column(column, gamepiece)
+  def make_move(column, gamepiece)
     h = get_height_of_first_empty_location_in_column(column)
     place_piece(h, column-1, gamepiece)
   end
@@ -153,12 +156,21 @@ class GameBoard
     return string
   end
 
-  def get_aigames_setup(playernumber)
-    string = "settings timebank 10000\n"
+  def get_aigames_setup
+    string = "Player One settings:\n"
+    string += "settings timebank 10000\n"
     string += "settings time_per_move 500\n"
     string += "settings player_names player1,player2\n"
-    string += "settings your_bot player#{playernumber}\n"
-    string += "settings your_botid #{playernumber}\n"
+    string += "settings your_bot player1\n"
+    string += "settings your_botid 1\n"
+    string += "settings field_columns 7\n"
+    string += "settings field_rows 6\n\n"
+    string += "Player Two settings:\n"
+    string += "settings timebank 10000\n"
+    string += "settings time_per_move 500\n"
+    string += "settings player_names player1,player2\n"
+    string += "settings your_bot player2\n"
+    string += "settings your_botid 2\n"
     string += "settings field_columns 7\n"
     string += "settings field_rows 6\n"
     return string

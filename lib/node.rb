@@ -1,25 +1,34 @@
 class Node
 
-  include Comparable
+  #include Comparable
 
-  attr_reader :column, :value, :subnode
+  attr_reader :move, :value, :subnode, :depth
 
-  def initialize (column, value, subnode)
+  def initialize (move, value, depth, subnode)
+    @move = move
     @value = value
-    @column = column
+    @depth = depth
     @subnode = subnode
   end
 
-  def <=>(other)
-    @value <=> other.value
-  end
+  # CRAZY FUCKING BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
+  # kept insisting that the "other" was a nil object.
+  # switching to comparing values directly
+  #def <=>(other)
+  #  #puts "Other: #{other} OtherNull?#{other == nil}"
+  #  if other == nil
+  #    $stderr.puts "Error comparing values in node. This: #{self} Other: #{other} OtherNull?#{other == nil}"
+  #    #other = Node.new(nil, 0, 0, 0)
+  #  end
+  #  @value.to_i <=> other.value.to_i
+  #end
 
   def -@
-    Node.new(@column, -@value, @subnode)
+    Node.new(@move, -@value, @depth, @subnode)
   end
 
   def to_s
-    "(C:#{@column} V:#{@value}, SN:#{@subnode} )"
+    "(C:#{@move}, V:#{@value}, D:#{@depth}. SN:#{@subnode} )"
   end
 
 end

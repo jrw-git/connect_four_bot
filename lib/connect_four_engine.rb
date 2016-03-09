@@ -8,11 +8,13 @@ class ConnectFourEngine
   @@board_height = 6
   @@board_width = 7
 
-  def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol))
+  def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol), bot_testing = false)
     if log_name != nil
       @log_enabled = true
       @log_name = log_name
-      setup_log(@log_name)
+      if !File.exist?(@log_name)
+        setup_log(@log_name)
+      end
     else
       @log_enabled = false
     end
@@ -21,9 +23,8 @@ class ConnectFourEngine
     @next_player = p2
     #@current_player = self.setup_player(GameBoard::PlayerOneSymbol)
     #@next_player = self.setup_player(GameBoard::PlayerTwoSymbol)
-    if false
-      puts @board.get_aigames_setup(@current_player.piece) + "\n"
-    end
+    @bot_testing = bot_testing
+    puts @board.get_aigames_setup() + "\n" if @bot_testing
   end
 
   # THE HEURISTIC DOESN'T WORK PROPERLY
@@ -43,12 +44,10 @@ class ConnectFourEngine
 
   def next_move(player)
     @board.print_me
-    if false
-      puts @board.get_aigames_update
-      puts "action move 10000\n\n"
-    end
+    puts @board.get_aigames_update if @bot_testing
+    puts "action move 10000\n\n" if @bot_testing
     player_move = player.make_a_move(@board)
-    @board.place_piece_in_column(player_move, player.piece)
+    @board.make_move(player_move, player.piece)
     puts
     if @board.is_there_a_win?
       if player.piece == GameBoard::PlayerOneSymbol
@@ -62,7 +61,7 @@ class ConnectFourEngine
       @board.print_me
       puts '=' * 50
       puts "Congrats! #{player} #{player.piece} won!"
-      puts "Pausing for 5 seconds, then proceeding (or exiting)"
+      puts "Pausing for 5 seconds... (control-c exits)"
       puts '=' * 50
       sleep(5)
       return true
@@ -84,7 +83,7 @@ class ConnectFourEngine
   end
 
   def log_game_results(p1_wins_add, p2_wins_add, draws_add, total_games_add)
-    puts "File #{@log_name} exists? #{File.exist?(@log_name)}"
+    puts "Logging results to file #{@log_name}"
     open_log = File.open(@log_name, 'r+')
     p1_wins = open_log.readline.chomp.to_i
     p2_wins = open_log.readline.chomp.to_i
@@ -156,6 +155,7 @@ class ConnectFourEngine
     log_file.write("0\n")
     log_file.write("0\n")
     log_file.write("0\n")
+    log_file.write("Above format: Player 1 Win Total, Player 2 Win Total, Draws, Total Games Played")
     log_file.write(@current_player.inspect + "\n")
     log_file.write(@next_player.inspect + "\n")
     log_file.close
@@ -169,8 +169,21 @@ puts "You can play against two different AI/bots, or play vs another human."
 #puts "Results are logged to a log file so that AI vs AI matches can run infinitely."
 puts "To exit, hit control-c or close the window. By default 100 games will occur."
 
+puts "Do you want to output data for bot testing?"
+puts "If yes, then you will see lines of data you can copy/paste to the bot window"
+print "Output data for copy/pasting to bot? (y/n): "
+
+bot_testing = $stdin.gets.chomp
+if bot_testing == 'y'
+  bot_testing = true
+else
+  bot_testing = false
+end
+
 log_name = nil
-if false
+print "Do you want to save win/loss/draw data to a file for statistical purposes? (y/n): "
+log_choice = $stdin.gets.chomp
+if log_choice == 'y'
   print "Enter log file (.txt added): "
   log_name = $stdin.gets.chomp
   log_name += ".txt"
@@ -181,7 +194,7 @@ p1 = ConnectFourEngine.setup_player(GameBoard::PlayerOneSymbol)
 p2 = ConnectFourEngine.setup_player(GameBoard::PlayerTwoSymbol)
 number_runs = 100
 (1..number_runs).each do |x|
-  connect_four_game = ConnectFourEngine.new(log_name, p1, p2)
+  connect_four_game = ConnectFourEngine.new(log_name, p1, p2, bot_testing)
 
   connect_four_game.run_game
 end
