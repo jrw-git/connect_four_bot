@@ -46,7 +46,7 @@ class BotParser
           bot_name = "AI-Monte-Carlo:#{@settings["your_bot"]}"
           time_limit = 0.5 #seconds
           use_deep_iteration = false
-          monte_carlo = false
+          monte_carlo = true
           use_aigames_interface = true
           @our_bot = Player.new(bot_name, @settings["your_botid"], time_limit, use_deep_iteration, monte_carlo, use_aigames_interface)
           $stderr.puts @our_bot.inspect
@@ -72,7 +72,7 @@ class BotParser
         # action move 10000   (10000 is timeleft)
         @time_left = instruction_array[2]
         @our_move = @our_bot.make_a_move(@our_gameboard) - 1
-        
+
         $stdout.puts("place_disc #{@our_move}")
       else
         $stderr.puts "ERROR: Unknown action detected: #{instruction_array}"
