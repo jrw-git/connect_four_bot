@@ -24,7 +24,7 @@ class Node
   #end
 
   def -@
-    Node.new(@move, -@value, @depth, @subnode)
+    Node.new(@move.to_i, -@value.to_f, @depth.to_i, @subnode)
   end
 
   def to_s

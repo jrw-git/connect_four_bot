@@ -77,6 +77,11 @@ class GameBoard
     return coord_array
   end
 
+  def make_move(column, gamepiece)
+    h = get_height_of_first_empty_location_in_column(column)
+    place_piece(h, column-1, gamepiece)
+  end
+
   def place_piece(height, width, gamepiece)
     @last_move = {"height" => height, "width" => width}
     @last_player = gamepiece
@@ -84,16 +89,36 @@ class GameBoard
     @board[height][width] = gamepiece
   end
 
-  def make_move(column, gamepiece)
-    h = get_height_of_first_empty_location_in_column(column)
-    place_piece(h, column-1, gamepiece)
+  def undo_move(column, gamepiece)
+    h = get_height_of_first_filled_location_in_column(column)
+    remove_piece(h, column-1, gamepiece)
+  end
+
+  def remove_piece(height, width, gamepiece)
+    check = @board[height][width]
+    if check != gamepiece
+      puts "Error removing piece, board is now FUBAR"
+      exit
+    end
+    @board[height][width] = DefaultSymbol
+    @turns -= 1
+    @last_move = nil
+    @last_player = nil
+  end
+
+  def get_height_of_first_filled_location_in_column(column)
+    (0...@height).each do |h|
+      if !(is_location_empty?(h, column-1))
+        return h
+      end
+    end
+    return 0
   end
 
   def get_height_of_first_empty_location_in_column(column)
-    # really need to validate this by passing through is_column_empty? first
     (0...@height).each do |height_index|
-      if is_location_empty?(@height - height_index-1, column-1)
-        return @height - height_index-1
+      if is_location_empty?( (@height -1) - height_index, column-1)
+        return (@height - 1) - height_index
       end
     end
   end
@@ -134,6 +159,7 @@ class GameBoard
       @board[height_index].each_index do |width_index|
         #print "( #{@board[height_index][width_index]} )   "
         print "#{@board[height_index][width_index]} "
+        #print " (#{height_index},#{width_index}) "
       end
       puts
     end

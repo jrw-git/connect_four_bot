@@ -7,6 +7,7 @@ class ConnectFourEngine
 
   @@board_height = 6
   @@board_width = 7
+  @@pause_length = 5
 
   def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol), bot_testing = false)
     if log_name != nil
@@ -27,15 +28,10 @@ class ConnectFourEngine
     puts @board.get_aigames_setup() + "\n" if @bot_testing
   end
 
-  # THE HEURISTIC DOESN'T WORK PROPERLY
-  # ITERATIVE DEEPENING WORKS
-  # ALPHA BETA WORKS
-  # MOVE SORTING SORTA KINDA WORKS - in that I just shuffle the center positions to be checked first
-
   def run_game
     end_of_game = false
     until end_of_game
-      puts "Turn: #{@current_player} #{@current_player.piece}"
+      puts "Turn: #{@current_player}  Symbol:#{@current_player.piece}"
       end_of_game = next_move(@current_player)
       @current_player = swap_players
     end
@@ -55,31 +51,89 @@ class ConnectFourEngine
       else
         log_game_results(0, 1, 0, 1) if @log_enabled
       end
-      puts '=' * 50
-      puts "Final Game Board:"
-      puts '=' * 50
-      @board.print_me
-      puts '=' * 50
+      print_final_board
       puts "Congrats! #{player} #{player.piece} won!"
-      puts "Pausing for 5 seconds... (control-c exits)"
-      puts '=' * 50
-      sleep(5)
+      sleep(@@pause_length)
       return true
     end
     if @board.is_there_a_tie?
       log_game_results(0, 0, 1, 1) if @log_enabled
-      puts '=' * 50
-      puts "Final Game Board:"
-      puts '=' * 50
-      @board.print_me
-      puts '=' * 50
-      puts "Tied game."
-      puts "Pausing for 5 seconds, then proceeding (or exiting)"
-      puts '=' * 50
-      sleep(5)
+      print_final_board
+      puts "Tied game. Nobody wins or loses."
+      sleep(@@pause_length)
       return true
     end
+  end
 
+  def print_final_board
+    puts '=' * 50
+    puts "Final Game Board:"
+    puts '=' * 50
+    @board.print_me
+    puts '=' * 50
+    puts "Pausing for #{@@pause_length} seconds, then proceeding (control-c exits)"
+    puts '=' * 50
+  end
+
+  def swap_players
+    @will_be_next_player = @current_player
+    @current_player = @next_player
+    @next_player = @will_be_next_player
+    return @current_player
+  end
+
+  def self.setup_player(player_symbol)
+    time_to_iterate = 0.5
+    use_aigames_interface = false
+    print "Do you want Player #{player_symbol} to be human? (y/n): "
+    choice = $stdin.gets.chomp
+    if choice == 'y'
+      return PlayerHuman.new("Human", player_symbol)
+    elsif choice == 'n'
+      print "Do you want an (e)asy, (m)edium or a (h)ard AI? (e/m/h): "
+      choice = $stdin.gets.chomp
+      if choice == 'h'
+        puts "How long will you let the AI think for? The higher the number the better the performance."
+        print "Enter number of seconds (2 minimum): "
+        time_to_iterate = $stdin.gets.chomp.to_f
+        if time_to_iterate < 2.0
+          time_to_iterate = 2.0
+        end
+        puts "Letting AI think for #{time_to_iterate} seconds per turn."
+        monte_carlo = true
+        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+      elsif choice == 'm'
+        monte_carlo = true
+        time_to_iterate = 0.5
+        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+      elsif choice == 'b'
+        monte_carlo = true
+        time_to_iterate = 40
+        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+      elsif choice == 's'
+        monte_carlo = false
+        puts "How many plies deep will you let the AI search?"
+        print "Enter number of moves to search (4 minimum): "
+        time_to_iterate = $stdin.gets.chomp.to_f
+        if time_to_iterate < 4
+          time_to_iterate = 4
+        end
+        puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
+        # hacky way of letting me set the depth of a straight negamax search from player setup
+        # use algorithm time limit as depth limit
+        return Player.new("AI Negamax-#{time_to_iterate}", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+      elsif choice == 'e'
+        monte_carlo = false
+        # hacky way of letting me set the depth of a straight negamax search from player setup
+        # use algorithm time limit as depth limit
+        depth_limit = 4
+        return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface)
+      else
+        setup_player(player_symbol)
+      end
+    else
+      setup_player(player_symbol)
+    end
   end
 
   def log_game_results(p1_wins_add, p2_wins_add, draws_add, total_games_add)
@@ -103,53 +157,8 @@ class ConnectFourEngine
     open_log.write("#{total_games}\n")
     open_log.close
   end
-  def swap_players
-    @will_be_next_player = @current_player
-    @current_player = @next_player
-    @next_player = @will_be_next_player
-    return @current_player
-  end
-
-  def self.setup_player(player_symbol)
-    time_to_iterate = 0.5
-    use_aigames_interface = false
-    print "Do you want Player #{player_symbol} to be human? (y/n): "
-    choice = $stdin.gets.chomp
-    if choice == 'y'
-      return PlayerHuman.new("Human", player_symbol)
-    elsif choice == 'n'
-      puts "How long will you let the AI think for? The higher the number the better the performance."
-      print "Enter number of seconds (0.5 minimum): "
-      time_to_iterate = $stdin.gets.chomp.to_f
-      if time_to_iterate < 0.5
-        time_to_iterate = 0.5
-      end
-      puts "Letting AI think for #{time_to_iterate} seconds per turn."
-      #print "Do you want a (m)ixed Monte Carlo/Negamax AI or a pure (n)egamax-deep-iterating AI? (m/n): "
-      print "Do you want an (e)asy AI that searches 2 moves ahead, or a (h)ard AI? (e/h): "
-      choice = $stdin.gets.chomp
-      if choice == 'h'
-        monte_carlo = true
-        use_deep_iteration = false
-        return Player.new("AI Monte Carlo", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
-      elsif choice == 'n'
-        monte_carlo = false
-        use_deep_iteration = true
-        return Player.new("AI Nega-Deep", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
-      elsif choice == 'e'
-        monte_carlo = false
-        use_deep_iteration = false
-        return Player.new("AI Negamax-Simple", player_symbol, time_to_iterate, use_deep_iteration, monte_carlo, use_aigames_interface)
-      else
-        setup_player(player_symbol)
-      end
-    else
-      setup_player(player_symbol)
-    end
-  end
 
   def setup_log(log_name)
-    #log_name = "connect_four_run_statistics.txt"
     log_file = File.open(@log_name, "w")
     log_file.write("0\n")
     log_file.write("0\n")
@@ -166,13 +175,12 @@ end
 puts "Welcome to Connect Four - Game and AI/bot"
 puts "Written 2016 by John White"
 puts "You can play against two different AI/bots, or play vs another human."
-#puts "Results are logged to a log file so that AI vs AI matches can run infinitely."
-puts "To exit, hit control-c or close the window. By default 100 games will occur."
+puts "Results are logged to a log file so that AI vs AI matches can run without your input."
+puts "To exit, hit control-c or close the window. By default 1000 games will occur."
 
 puts "Do you want to output data for bot testing?"
 puts "If yes, then you will see lines of data you can copy/paste to the bot window"
 print "Output data for copy/pasting to bot? (y/n): "
-
 bot_testing = $stdin.gets.chomp
 if bot_testing == 'y'
   bot_testing = true
@@ -192,9 +200,8 @@ end
 
 p1 = ConnectFourEngine.setup_player(GameBoard::PlayerOneSymbol)
 p2 = ConnectFourEngine.setup_player(GameBoard::PlayerTwoSymbol)
-number_runs = 100
+number_runs = 1000
 (1..number_runs).each do |x|
   connect_four_game = ConnectFourEngine.new(log_name, p1, p2, bot_testing)
-
   connect_four_game.run_game
 end
