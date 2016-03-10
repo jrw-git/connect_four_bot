@@ -44,7 +44,7 @@ class BotParser
         @settings[instruction_array[1]] = instruction_array[2]
         if instruction_array[1] == "your_botid"
           @bot_name = "AI-Monte-Carlo:#{@settings["your_bot"]}"
-          @time_limit = 0.5 #seconds
+          @time_limit = 0.6 #seconds
           @monte_carlo = true
           @use_aigames_interface = true
           @bot_id = @settings["your_botid"]

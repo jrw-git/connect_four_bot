@@ -6,7 +6,13 @@ module NegamaxAnalysis
   @@enable_killer_moves = true
   @@try_board_dup = true
 
-  # depends on @value_of_win, @value_of_tie, @value_of_unknown
+  # CURRENTLY DEPENDS ON PARENT FUNCTION swap_pieces(current_player)
+
+  # try_board_dup is for optimization testing
+  # toggles a change between duping a board then discarding it when done
+  # vs making a move, then unmaking a move, on the original board
+
+  # depends on a BUNCH of parent variables....
 
   def check_board_for_final_square_value(board, active_piece, depth)
     if board.is_there_a_win?
@@ -38,16 +44,11 @@ module NegamaxAnalysis
     # iterate over possible moves and get their values (down to depth limit)
     list_of_moves.each do |move|
       trial_move_board = nil
-      if @@try_board_dup
-        trial_move_board = board.dup
-      else
-        trial_move_board = board
-      end
+      trial_move_board = board.dup if @@try_board_dup
+      trial_move_board = board if !@@try_board_dup
       trial_move_board.make_move(move, active_piece)
       subtree_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
-      if !@@try_board_dup
-        trial_move_board.undo_move(move, active_piece)
-      end
+      trial_move_board.undo_move(move, active_piece) if !@@try_board_dup
       # CRAZY !@#$%^&* BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
       # kept insisting that the "other" was a nil object.
       # switching to comparing values directly

@@ -104,13 +104,19 @@ class ConnectFourEngine
         return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
       elsif choice == 'm'
         monte_carlo = true
-        time_to_iterate = 0.5
+        time_to_iterate = 0.6
         return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 'b'
+      elsif choice == 'e'
+        monte_carlo = false
+        # hacky way of letting me set the depth of a straight negamax search from player setup
+        # use algorithm time limit as depth limit
+        depth_limit = 4
+        return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface)
+      elsif choice == 'b' # 'hidden' benchmarking setting for use with profiler
         monte_carlo = true
         time_to_iterate = 40
         return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 's'
+      elsif choice == 's' # 'hidden' negamax-only setting for testing
         monte_carlo = false
         puts "How many plies deep will you let the AI search?"
         print "Enter number of moves to search (4 minimum): "
@@ -122,12 +128,6 @@ class ConnectFourEngine
         # hacky way of letting me set the depth of a straight negamax search from player setup
         # use algorithm time limit as depth limit
         return Player.new("AI Negamax-#{time_to_iterate}", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 'e'
-        monte_carlo = false
-        # hacky way of letting me set the depth of a straight negamax search from player setup
-        # use algorithm time limit as depth limit
-        depth_limit = 4
-        return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface)
       else
         setup_player(player_symbol)
       end
