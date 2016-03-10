@@ -101,15 +101,15 @@ class ConnectFourEngine
         end
         puts "Letting AI think for #{time_to_iterate} seconds per turn."
         monte_carlo = true
-        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
       elsif choice == 'm'
         monte_carlo = true
         time_to_iterate = 0.5
-        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
       elsif choice == 'b'
         monte_carlo = true
         time_to_iterate = 40
-        return Player.new("AI:#{time_to_iterate}s Monte Carlo + Negamax", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
+        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
       elsif choice == 's'
         monte_carlo = false
         puts "How many plies deep will you let the AI search?"

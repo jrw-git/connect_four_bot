@@ -2,6 +2,11 @@ require_relative "node"
 
 module MonteCarloAnalysis
 
+  # CURRENTLY DEPENDS ON PARENT FUNCTION swap_pieces(current_player)
+
+  # try_board_dup is for optimization testing
+  # toggles a change between duping a board then discarding it when done
+  # vs making a move, then unmaking a move, on the original board
   @@try_board_dup = true
 
   def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, our_io_stream)
@@ -18,11 +23,8 @@ module MonteCarloAnalysis
       recursion_counter += 1
       # make a copy of the game board to work with
       trial_move_board = nil
-      if @@try_board_dup
-        trial_move_board = board.dup
-      else
-        trial_move_board = board
-      end
+      trial_move_board = board.dup if @@try_board_dup
+      trial_move_board = board if !@@try_board_dup
       result = simulate_monte_carlo_playout(trial_move_board, list_of_moves, active_piece)
       if result.value > 0
         hash_of_moves[result.move]["wins"] += 1
@@ -31,7 +33,6 @@ module MonteCarloAnalysis
     end
     # rank moves
     sorted = get_best_monte_carlo_result(hash_of_moves)
-    #@our_io_stream.puts "Monte Carlo Moves: #{sorted.to_s}"
     our_io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds."
     return sorted
   end
@@ -39,21 +40,16 @@ module MonteCarloAnalysis
   def simulate_monte_carlo_playout(trial_move_board, list_of_moves, current_player)
       win = trial_move_board.is_there_a_win?
       tie = trial_move_board.is_there_a_tie?
-      if win
-        # a negative gets flipped to a positive by the recursive call
-        return Node.new(-1, -1, 0, -1)
-      elsif tie
-        return Node.new(-1, 0, 0, -1)
-      end
-      current_player = swap_pieces(current_player)
+      # a negative gets flipped to a positive by the recursive call
+      return Node.new(-1, -1, 0, -1) if win
+      return Node.new(-1, 0, 0, -1) if tie
+      current_player = self.swap_pieces(current_player)
       # get a random move from the list of good moves to make
       random_index = Random.rand(list_of_moves.size)
       move = list_of_moves[random_index]
       trial_move_board.make_move(move, current_player)
       subtree_node = -simulate_monte_carlo_playout(trial_move_board, trial_move_board.get_available_moves, current_player)
-      if !@@try_board_dup
-        trial_move_board.undo_move(move, current_player)
-      end
+      trial_move_board.undo_move(move, current_player) if !@@try_board_dup
       return Node.new(move, subtree_node.value, subtree_node.depth+1, subtree_node)
   end
 
