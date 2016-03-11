@@ -7,7 +7,7 @@ class ConnectFourEngine
 
   @@board_height = 6
   @@board_width = 7
-  @@pause_length = 5
+  @@pause_length = 1
 
   def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol), bot_testing = false)
     if log_name != nil
@@ -85,52 +85,54 @@ class ConnectFourEngine
   def self.setup_player(player_symbol)
     time_to_iterate = 0.5
     use_aigames_interface = false
+    use_heuristics = false
+    puts "Select from the options for player #{player_symbol}:"
+    puts "1) Human"
+    puts "2) Easy"
+    puts "3) Medium (AI Games Difficulty)"
+    puts "4) You Specify Pure Negamax Search Depth"
+    puts "5) You Specify Mixed AI Length and Ratio"
     print "Do you want Player #{player_symbol} to be human? (y/n): "
     choice = $stdin.gets.chomp
-    if choice == 'y'
+    case choice
+    when '1'
       return PlayerHuman.new("Human", player_symbol)
-    elsif choice == 'n'
-      print "Do you want an (e)asy, (m)edium or a (h)ard AI? (e/m/h): "
-      choice = $stdin.gets.chomp
-      if choice == 'h'
-        puts "How long will you let the AI think for? The higher the number the better the performance."
-        print "Enter number of seconds (2 minimum): "
-        time_to_iterate = $stdin.gets.chomp.to_f
-        if time_to_iterate < 2.0
-          time_to_iterate = 2.0
-        end
-        puts "Letting AI think for #{time_to_iterate} seconds per turn."
-        monte_carlo = true
-        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 'm'
-        monte_carlo = true
-        time_to_iterate = 0.6
-        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 'e'
-        monte_carlo = false
-        # hacky way of letting me set the depth of a straight negamax search from player setup
-        # use algorithm time limit as depth limit
-        depth_limit = 4
-        return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface)
-      elsif choice == 'b' # 'hidden' benchmarking setting for use with profiler
-        monte_carlo = true
-        time_to_iterate = 40
-        return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      elsif choice == 's' # 'hidden' negamax-only setting for testing
-        monte_carlo = false
-        puts "How many plies deep will you let the AI search?"
-        print "Enter number of moves to search (4 minimum): "
-        time_to_iterate = $stdin.gets.chomp.to_f
-        if time_to_iterate < 4
-          time_to_iterate = 4
-        end
-        puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
-        # hacky way of letting me set the depth of a straight negamax search from player setup
-        # use algorithm time limit as depth limit
-        return Player.new("AI Negamax-#{time_to_iterate}", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface)
-      else
-        setup_player(player_symbol)
+    when 't'
+      monte_carlo = false
+      time_to_iterate = 6
+      return Player.new("AI:#{time_to_iterate}s Pure Nega With Heuristic", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, true)
+    when '2'
+      monte_carlo = false
+      # hacky way of letting me set the depth of a straight negamax search from player setup
+      # use algorithm time limit as depth limit
+      depth_limit = 4
+      return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface, use_heuristics)
+    when '3'
+      monte_carlo = true
+      time_to_iterate = 0.7
+      return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
+    when '4'
+      monte_carlo = false
+      puts "How many plies deep will you let the AI search?"
+      print "Enter number of moves to search (2 minimum): "
+      time_to_iterate = $stdin.gets.chomp.to_f
+      if time_to_iterate < 2
+        time_to_iterate = 2
       end
+      puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
+      # hacky way of letting me set the depth of a straight negamax search from player setup
+      # use algorithm time limit as depth limit
+      return Player.new("AI Negamax-#{time_to_iterate}", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
+    when '5'
+      puts "How long will you let the AI think for? The higher the number the better the performance."
+      print "Enter number of seconds (2 minimum): "
+      time_to_iterate = $stdin.gets.chomp.to_f
+      if time_to_iterate < 2.0
+        time_to_iterate = 2.0
+      end
+      puts "Letting AI think for #{time_to_iterate} seconds per turn."
+      monte_carlo = true
+      return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
     else
       setup_player(player_symbol)
     end

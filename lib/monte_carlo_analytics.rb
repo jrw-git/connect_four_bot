@@ -7,9 +7,8 @@ module MonteCarloAnalysis
   # try_board_dup is for optimization testing
   # toggles a change between duping a board then discarding it when done
   # vs making a move, then unmaking a move, on the original board
-  @@try_board_dup = true
 
-  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, our_io_stream)
+  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit)
     #begin monte carlo analysis
     start_time = Time.now
     hash_of_moves = Hash.new
@@ -22,9 +21,8 @@ module MonteCarloAnalysis
     while ((Time.now - start_time) <= (time_limit) && recursion_counter <= game_limit)
       recursion_counter += 1
       # make a copy of the game board to work with
-      trial_move_board = nil
-      trial_move_board = board.dup if @@try_board_dup
-      trial_move_board = board if !@@try_board_dup
+      trial_move_board = board.dup if @try_board_dup
+      trial_move_board = board if !@try_board_dup
       result = simulate_monte_carlo_playout(trial_move_board, list_of_moves, active_piece)
       if result.value > 0
         hash_of_moves[result.move]["wins"] += 1
@@ -33,7 +31,7 @@ module MonteCarloAnalysis
     end
     # rank moves
     sorted = get_best_monte_carlo_result(hash_of_moves)
-    our_io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds."
+    @our_io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
     return sorted
   end
 
@@ -49,7 +47,7 @@ module MonteCarloAnalysis
       move = list_of_moves[random_index]
       trial_move_board.make_move(move, current_player)
       subtree_node = -simulate_monte_carlo_playout(trial_move_board, trial_move_board.get_available_moves, current_player)
-      trial_move_board.undo_move(move, current_player) if !@@try_board_dup
+      trial_move_board.undo_move(move, current_player) if !@try_board_dup
       return Node.new(move, subtree_node.value, subtree_node.depth+1, subtree_node)
   end
 
@@ -58,7 +56,9 @@ module MonteCarloAnalysis
     best_move = 0
     hash_of_moves.each do |key, subhash|
       if subhash["plays"] != 0.0
-        hash_of_moves[key]["percentage"] = subhash["wins"] / subhash["plays"].to_f
+        hash_of_moves[key]["percentage"] = subhash["wins"] / subhash["plays"].to_f * 1000.0
+      else
+        hash_of_moves[key]["percentage"] = 0.0
       end
       if hash_of_moves[key]["percentage"] >= highest_percentage
         highest_percentage = hash_of_moves[key]["percentage"]

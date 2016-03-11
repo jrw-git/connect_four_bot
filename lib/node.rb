@@ -28,7 +28,7 @@ class Node
   end
 
   def to_s
-    "(C:#{@move}, V:#{@value}, D:#{@depth}. SN:#{@subnode} )"
+    "(M#{@move}, V#{@value}, D#{@depth}, SN:#{@subnode})"
   end
 
 end

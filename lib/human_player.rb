@@ -1,6 +1,6 @@
 class PlayerHuman
 
-  attr_reader :player, :piece
+  attr_reader :player_type, :piece
 
   def initialize(player_type, symbol)
     @player_type = player_type

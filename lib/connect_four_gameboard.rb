@@ -7,6 +7,7 @@ class GameBoard
   PlayerTwoSymbol = '2'
 
   def initialize(height, width, current_player, current_turn = 1, board_array = nil)
+    @all_neighbors_array = Array.new
     @original = true
     @height = height.to_i
     @width = width.to_i
@@ -38,34 +39,53 @@ class GameBoard
     end
   end
 
-  def get_neighbors(last_move, last_player,h_shift, w_shift)
+  def find_last_move_neighbors(h_shift, w_shift, total_radius)
     pre = ""
     post = ""
-    (1..3).each do |x|
-      w = last_move["width"]
-      h = last_move["height"]
+    (1..total_radius).each do |x|
+      w = @last_move["width"]
+      h = @last_move["height"]
       hs = h_shift*x
       ws = w_shift*x
       pre += get_piece((h-hs), (w-ws))
       post += get_piece((h+hs), (w+ws))
     end
     # was getting a hilarious bug because I didn't think through the pre + post sequencing. pre needs reversal.
-    return pre.reverse + last_player + post
+    return pre.reverse + @last_player + post
+  end
+
+  def get_cached_neighbors
+    if @all_neighbors_array.size > 0
+      return @all_neighbors_array
+    else
+      puts "Error getting cached neighbors, size was zero"
+    end
+  end
+
+  def get_all_neighbors(depth)
+    results = Array.new
+    results.push(find_last_move_neighbors(0, 1, depth))
+    results.push(find_last_move_neighbors(1, 0, depth))
+    results.push(find_last_move_neighbors(-1, 1, depth))
+    results.push(find_last_move_neighbors(1, -1, depth))
+    results.push(find_last_move_neighbors(-1, -1, depth))
+    results.push(find_last_move_neighbors(1, 1, depth))
+    #@all_neighbors_array = results
+    return results
   end
 
   def is_there_a_win?
-    if @turns < 7
-      return false
-    end
+    #if @turns < 7
+    #  return false
+    #end
     if @last_move["width"] == nil
       return false
     end
     win = false
-    win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, 0, 1))
-    win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, 1, 0))
-    win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, -1, 1))
-    win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, 1, -1))
-    win = win || check_string_for_win(@last_player, get_neighbors(@last_move, @last_player, -1, -1))
+    @all_neighbors_array = get_all_neighbors(3)
+    (0...@all_neighbors_array.size).each do |x|
+      win = win || check_string_for_win(@last_player, @all_neighbors_array[x])
+    end
     return win
   end
 
