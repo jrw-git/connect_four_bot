@@ -18,23 +18,37 @@ module NegamaxAnalysis
     @iterative_deepening_time_divider = 2.0
   end
 
+  def lookup_hash(hash, depth, alpha, beta)
+    if @transposition_table[hash]
+      result = @transposition_table[hash]["value"]
+      return result
+    end
+  end
+
+  def store_hash(hash, depth, value, alpha, beta)
+    @transposition_table[hash] = {"value" => value, "depth" => depth, "alpha" => alpha, "beta" => beta,}
+  end
+
   def heuristic_value(board, piece) #p is piece
     return @value_of_tie if !@use_heuristics
     strings = board.get_cached_neighbors
     piece = swap_pieces(piece)
+    super_combo = 0
     high_value_combo = 0
     med_value_combo = 0
     score = 0
     strings.each do |str|
+      super_combo += str.scan("0#{piece}#{piece}#{piece}0").size
       high_value_combo += str.scan("0#{piece}#{piece}#{piece}").size
-      high_value_combo += str.scan("#{piece}#{piece}#{piece}0").size
-      high_value_combo += str.scan("#{piece}#{piece}0#{piece}").size
       high_value_combo += str.scan("#{piece}0#{piece}#{piece}").size
+      high_value_combo += str.scan("#{piece}#{piece}0#{piece}").size
+      high_value_combo += str.scan("#{piece}#{piece}#{piece}0").size
       med_value_combo += str.scan("#{piece}00#{piece}").size
       med_value_combo += str.scan("#{piece}0#{piece}0").size
       med_value_combo += str.scan("0#{piece}0#{piece}").size
+      score += super_combo * 2048
       score += high_value_combo * 1024
-      score += med_value_combo * 64
+      score += med_value_combo * 128
     end
     return Node.new(-1, -score, 0, -1)
   end
@@ -84,7 +98,7 @@ module NegamaxAnalysis
       trial_move_board.make_move(move, active_piece)
       subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
       @our_io_stream.puts "M#{move}: #{subnode_best}" if print_result
-      trial_move_board.undo_move(move, active_piece) if !@try_board_dup
+      trial_move_board.undo_move if !@try_board_dup
       # CRAZY !@#$%^&* BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
       # kept insisting that the "other" was a nil object. switching to comparing values directly
       # seriously spent hours on this !@#$%^&* bug

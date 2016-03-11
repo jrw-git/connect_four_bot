@@ -17,7 +17,6 @@ class PlayerHuman
         exit
       end
     end until (board.is_column_empty?(selected_column) && (selected_column > 0) && (selected_column < 8))
-    #board.place_piece_in_column(selected_column, @piece)
     return selected_column
   end
 

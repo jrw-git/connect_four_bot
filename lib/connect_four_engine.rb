@@ -3,6 +3,8 @@ require_relative "human_player"
 require_relative "connect_four_gameboard"
 require_relative "node"
 
+require_relative "zobrist_hashing"
+
 class ConnectFourEngine
 
   @@board_height = 6
@@ -10,6 +12,7 @@ class ConnectFourEngine
   @@pause_length = 1
 
   def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol), bot_testing = false)
+    @hasher = ZobristHash.new
     if log_name != nil
       @log_enabled = true
       @log_name = log_name
@@ -30,7 +33,14 @@ class ConnectFourEngine
 
   def run_game
     end_of_game = false
+    @running_hash = @hasher.hash_entire_board(@board)
+    @reversed_hash = nil
     until end_of_game
+      start_time = Time.now
+      new_board_hash = @hasher.hash_entire_board(@board)
+      puts "New Calc'd Hash: #{new_board_hash} TimeCalc:#{Time.now-start_time}"
+      puts "Running Total Hash: #{@running_hash} TimeCalc:#{Time.now-start_time}"
+      puts "Reversed Total Hash: #{@reversed_hash} TimeCalc:#{Time.now-start_time}"
       puts "Turn: #{@current_player}  Symbol:#{@current_player.piece}"
       end_of_game = next_move(@current_player)
       @current_player = swap_players
@@ -44,6 +54,8 @@ class ConnectFourEngine
     puts "action move 10000\n\n" if @bot_testing
     player_move = player.make_a_move(@board)
     @board.make_move(player_move, player.piece)
+    @running_hash = @hasher.hash_position_with_board(@running_hash, @board.last_move["height"], @board.last_move["width"], player.piece, @board)
+    @reversed_hash = @hasher.hash_position_with_board(@running_hash, @board.last_move["height"], @board.last_move["width"], player.piece, @board)
     puts
     if @board.is_there_a_win?
       if player.piece == GameBoard::PlayerOneSymbol
@@ -92,20 +104,26 @@ class ConnectFourEngine
     puts "3) Medium (AI Games Difficulty)"
     puts "4) You Specify Pure Negamax Search Depth"
     puts "5) You Specify Mixed AI Length and Ratio"
-    print "Do you want Player #{player_symbol} to be human? (y/n): "
+    print "Enter a number: "
     choice = $stdin.gets.chomp
     case choice
     when '1'
       return PlayerHuman.new("Human", player_symbol)
     when 't'
       monte_carlo = false
-      time_to_iterate = 6
+      puts "How many plies deep will you let the AI search?"
+      print "Enter number of moves to search (2 minimum): "
+      time_to_iterate = $stdin.gets.chomp.to_f
+      if time_to_iterate < 2
+        time_to_iterate = 2
+      end
+      puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
       return Player.new("AI:#{time_to_iterate}s Pure Nega With Heuristic", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, true)
     when '2'
       monte_carlo = false
       # hacky way of letting me set the depth of a straight negamax search from player setup
       # use algorithm time limit as depth limit
-      depth_limit = 4
+      depth_limit = 6
       return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface, use_heuristics)
     when '3'
       monte_carlo = true

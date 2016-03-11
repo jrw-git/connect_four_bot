@@ -6,6 +6,7 @@
 
 require_relative "monte_carlo_analytics"
 require_relative "negamax_analytics"
+require_relative "zobrist_hashing"
 
 class Player
 
@@ -15,6 +16,8 @@ class Player
   attr_reader :player_type, :piece
 
   def initialize(player_type, symbol, algorithm_limit, monte_carlo_on, aigames_interface_on, use_heuristics)
+    @our_hasher = ZobristHash.new
+    #@transposition_table =
     @try_board_dup = true
     @player_type = player_type
     @use_heuristics = use_heuristics
@@ -38,16 +41,12 @@ class Player
     super()
   end
 
-  def set_piece(symbol)
-    @piece = symbol
-  end
-
   def make_a_move(board)
     # stats variables that currently aren't printed out
     @recursion_counter = 0
     start_time = Time.now
     ai_move = ai_main_loop(board, @piece, @algorithm_limit)
-    @our_io_stream.puts("Made move #{ai_move.move} in #{Time.now - start_time} seconds.")
+    @our_io_stream.puts("Made move #{ai_move.move} in #{@recursion_counter} recursions, in #{Time.now - start_time} seconds. RPS:#{@recursion_counter/(Time.now - start_time)}")
     return ai_move.move
   end
 
@@ -56,7 +55,7 @@ class Player
     if !@use_monte_carlo
       # hacky way of letting me set the depth of a straight negamax search from player setup
       # use algorithm time limit as depth limit
-      ai_move = negamax(board, @piece, @algorithm_limit, @lowest_score, @highest_score, true)
+      ai_move = negamax(board, @piece, @algorithm_limit, @lowest_score, @highest_score, print_result)
       return ai_move
     end
     # we split our time between negamax analysis and monte carlo analysis
@@ -96,7 +95,7 @@ class Player
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
       subnode_best = -iterative_deepening_negamax_search(trial_move_board, swap_pieces(active_piece), @deepening_depth_limit, (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
-      trial_move_board.undo_move(move, active_piece) if !@try_board_dup
+      trial_move_board.undo_move if !@try_board_dup
       sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
     end
     sorted_list.sort_by! { |object| object.value }
