@@ -2,13 +2,15 @@ class Node
 
   #include Comparable
 
-  attr_reader :move, :value, :subnode, :depth
+  attr_reader :move, :subnode, :depth, :hash
+  attr_accessor :value
 
-  def initialize (move, value, depth, subnode)
+  def initialize (move, value, depth, subnode, hash = nil)
     @move = move
     @value = value
     @depth = depth
     @subnode = subnode
+    @hash = hash
   end
 
   # CRAZY FUCKING BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....

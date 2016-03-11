@@ -13,20 +13,28 @@ module NegamaxAnalysis
 
   def initialize
     @killer_moves = Hash.new
+    @tables_on = true
     @enable_killer_moves = true
+    @size_of_table = 10000
+    @transposition_table = Array.new(@size_of_table)
     # if our previous depth search was within X (2.0 here) times of the time limit, don't start another
     @iterative_deepening_time_divider = 2.0
+    @deepening_depth_limit = 20
+    super()
   end
 
   def lookup_hash(hash, depth, alpha, beta)
-    if @transposition_table[hash]
-      result = @transposition_table[hash]["value"]
-      return result
+    modulod_hash = hash % @size_of_table
+    #puts "Table:#{@transposition_table[modulod_hash]} Class:#{@transposition_table[modulod_hash].class} Nil?#{@transposition_table[modulod_hash] == nil}"
+    if @transposition_table[modulod_hash] != nil
+      return @transposition_table[modulod_hash]
     end
+    return nil
   end
 
-  def store_hash(hash, depth, value, alpha, beta)
-    @transposition_table[hash] = {"value" => value, "depth" => depth, "alpha" => alpha, "beta" => beta,}
+  def store_hash(hash, depth, value, alpha, beta, flag)
+    @transposition_table[hash % @size_of_table] = { "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
+    #puts "Hash stored: #{hash}, entry: #{@transposition_table[hash]}, entire table:#{@transposition_table}"
   end
 
   def heuristic_value(board, piece) #p is piece
@@ -53,7 +61,7 @@ module NegamaxAnalysis
     return Node.new(-1, -score, 0, -1)
   end
 
-  def iterative_deepening_negamax_search(board, active_piece, max_depth, time_limit, alpha, beta, print_result = false)
+  def iterative_deepening_negamax_search(board, active_piece, time_limit, alpha, beta, print_result = false)
     current_depth = 0
     depth_best_move = nil
     start_time = Time.now
@@ -61,13 +69,14 @@ module NegamaxAnalysis
     # will return the best move found on the last level of depth called
     while ( (Time.now - start_time) <= (time_limit/@iterative_deepening_time_divider) )
       depth_best_move = @lowest_score
+      #board_hash = @our_hasher.hash_entire_board(board)
       subnode_best = negamax(board, active_piece, current_depth, alpha, beta)
       @our_io_stream.puts "ID#{current_depth}: #{subnode_best}" if print_result
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, subnode_best.move)
       end
       current_depth += 1
-      if current_depth > max_depth
+      if current_depth > @deepening_depth_limit
         return depth_best_move
       end
     end
@@ -83,6 +92,28 @@ module NegamaxAnalysis
   def negamax(board, active_piece, depth, alpha, beta, print_result = false)
     @recursion_counter += 1
     start_time = Time.now
+    hash = board.hash
+    if @tables_on
+      hash_lookup_result = lookup_hash(hash, depth, alpha, beta)
+    end
+    if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] == depth
+      flag = hash_lookup_result["flag"]
+      case flag
+      when "Exact"
+        return hash_lookup_result["value"]
+      when "Lower"
+        if alpha.value < hash_lookup_result["alpha"]
+          alpha = hash_lookup_result["value"]
+        end
+      when "Upper"
+        if beta.value > hash_lookup_result["beta"]
+          beta = hash_lookup_result["value"]
+        end
+      end
+      if alpha.value > beta.value
+        return hash_lookup_result["value"]
+      end
+    end
     # win/tie check, return a value if found
     result = check_board_for_final_square_value(board, active_piece, depth)
     return result unless result == nil
@@ -97,7 +128,7 @@ module NegamaxAnalysis
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
       subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
-      @our_io_stream.puts "M#{move}: #{subnode_best}" if print_result
+      @our_io_stream.puts "M#{move}:#{subnode_best}" if print_result
       trial_move_board.undo_move if !@try_board_dup
       # CRAZY !@#$%^&* BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
       # kept insisting that the "other" was a nil object. switching to comparing values directly
@@ -115,22 +146,26 @@ module NegamaxAnalysis
         alpha = depth_best_move
       end
     end
+    # make a flag
+    flag = ""
+    if depth_best_move.value <= alpha.value
+      flag = "Upper"
+    elsif depth_best_move.value >= beta.value
+      flag = "Lower"
+    else
+      flag = "Exact"
+    end
+    store_hash(hash, depth, depth_best_move, alpha, beta, flag) if @tables_on
     return depth_best_move
   end
 
   def check_board_for_final_square_value(board, active_piece, depth)
-    if board.is_there_a_win?
-      # if there's a win, return a value of -1,
-      # which gets flipped by the negamax recursion so that the
-      # player calling it sees a positive 1 for a winning board
-      return @value_of_win
-    elsif board.is_there_a_tie?
-      return @value_of_tie
-    end
-    if depth <= 0
-      return heuristic_value(board,active_piece)
-      #return @value_of_tie
-    end
+    # if there's a win, return a value of -1,
+    # which gets flipped by the negamax recursion so that the
+    # player calling it sees a positive 1 for a winning board
+    return @value_of_win if board.is_there_a_win?
+    return @value_of_tie if board.is_there_a_tie?
+    return heuristic_value(board,active_piece) if depth <= 0
     return nil
   end
 
@@ -152,7 +187,6 @@ module NegamaxAnalysis
     end
     if @killer_moves[depth] != nil && @enable_killer_moves
       possible_move = @killer_moves[depth]
-      #@our_io_stream.puts "PossMove:#{possible_move}, killer moves:#{@killer_moves}"
       if list_of_moves.include?(possible_move.move)
         list_of_moves.delete(possible_move.move)
         list_of_moves.unshift(possible_move.move)

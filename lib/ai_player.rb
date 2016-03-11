@@ -15,22 +15,16 @@ class Player
 
   attr_reader :player_type, :piece
 
-  def initialize(player_type, symbol, algorithm_limit, monte_carlo_on, aigames_interface_on, use_heuristics)
+  def initialize(player_type, symbol, brain_type, algorithm_limit, aigames_io)
     @our_hasher = ZobristHash.new
-    #@transposition_table =
     @try_board_dup = true
+    @use_heuristics = false
     @player_type = player_type
-    @use_heuristics = use_heuristics
     @piece = symbol
-    @use_monte_carlo = monte_carlo_on
-    @aigames_interface_on = aigames_interface_on
-    if @aigames_interface_on
-      @our_io_stream = $stderr
-    else
-      @our_io_stream = $stdout
-    end
-    @deepening_depth_limit = 20
-    @algorithm_limit = algorithm_limit.to_f
+    @brain_type = brain_type
+    @our_io_stream = $stderr if aigames_io
+    @our_io_stream = $stdout if !aigames_io
+    @algorithm_limit = algorithm_limit
     @lowest_score = Node.new(-1, -8192, 0, -1)
     @highest_score = Node.new(-1, 8192, 0, -1)
     @value_of_tie = Node.new(-1, 0, 0, -1)
@@ -45,41 +39,52 @@ class Player
     # stats variables that currently aren't printed out
     @recursion_counter = 0
     start_time = Time.now
+
     ai_move = ai_main_loop(board, @piece, @algorithm_limit)
     @our_io_stream.puts("Made move #{ai_move.move} in #{@recursion_counter} recursions, in #{Time.now - start_time} seconds. RPS:#{@recursion_counter/(Time.now - start_time)}")
     return ai_move.move
   end
 
   def ai_main_loop(board, active_piece, time_limit)
-    print_result = false
-    if !@use_monte_carlo
-      # hacky way of letting me set the depth of a straight negamax search from player setup
-      # use algorithm time limit as depth limit
-      ai_move = negamax(board, @piece, @algorithm_limit, @lowest_score, @highest_score, print_result)
-      return ai_move
-    end
-    # we split our time between negamax analysis and monte carlo analysis
-    # begin negamax analysis
-    nega_analysis_time_limit = time_limit * @ratio_of_negamax_to_montecarlo
-    nega_analysis_start_time = Time.now
     # if this is the first turn, always move in the center.
-    if board.turns <= 1
-      return @first_move
+    return @first_move if board.turns <= 1
+    @our_io_stream.puts "Size of Transposition Table:#{@transposition_table.size}"
+    print_result = true
+    start_time = Time.now
+    case @brain_type
+    when "MonteCarlo"
+      list_of_moves = board.get_available_moves
+      max_games = 50000
+      ai_move = monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, max_games, print_result)
+      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+    when "Negamax"
+      ai_move = negamax(board, active_piece, time_limit, @lowest_score, @highest_score, print_result)
+    when "IterativeNegamax"
+      ai_move = iterative_deepening_negamax_search(board, active_piece, time_limit, @lowest_score, @highest_score, print_result)
+      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+    when "Mixed"
+      nega_analysis_time_limit = time_limit * @ratio_of_negamax_to_montecarlo
+      nega_analysis_start_time = Time.now
+      # we split our time between negamax analysis and monte carlo analysis
+      # negamax check for any known winning, unknown outcome, known losing moves.
+      list_of_sorted_moves = get_negamax_ranked_moves(board, active_piece, nega_analysis_time_limit, print_result)
+      # pick from the best category available
+      # (ie, choose only winning, or only unknown moves, or if losing, only losing moves)
+      list_of_moves = select_best_move_set(list_of_sorted_moves)
+      # done with nega analysis
+      time_in_nega_analysis = Time.now - nega_analysis_start_time
+      bonus_time = nega_analysis_time_limit - time_in_nega_analysis
+      @our_io_stream.puts "Negamax Pre-MonteCarlo Analysis in #{time_in_nega_analysis} seconds. Unspent Time: #{bonus_time}. Move Set: #{list_of_moves}"
+      # take our set of moves and analyse them with monte carlo
+      monte_analysis_time_limit = (time_limit * (1-@ratio_of_negamax_to_montecarlo)) + bonus_time
+      ai_move = monte_carlo_time_limited(board, list_of_moves, active_piece, monte_analysis_time_limit, 50000, print_result)
+      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+    else
+      @our_io_stream.puts "Unknown brain type for AI: #{@brain_type}. Exiting."
+      exit
     end
-    # check for any known winning, unknown outcome, known losing moves.
-    list_of_sorted_moves = get_negamax_ranked_moves(board, active_piece, nega_analysis_time_limit, print_result)
-    # pick from the best category available
-    # (ie, choose only winning, or only unknown moves, or if losing, only losing moves)
-    list_of_moves = select_best_move_set(list_of_sorted_moves)
-    # done with nega analysis
-    time_in_nega_analysis = Time.now - nega_analysis_start_time
-    bonus_time = nega_analysis_time_limit - time_in_nega_analysis
-    @our_io_stream.puts "Negamax Pre-MonteCarlo Analysis in #{time_in_nega_analysis} seconds. Unspent Time: #{bonus_time}. Move Set: #{list_of_moves}"
-
-    monte_analysis_start_time = Time.now
-    monte_analysis_time_limit = (time_limit * (1-@ratio_of_negamax_to_montecarlo)) + bonus_time
-    best_monte_move = monte_carlo_time_limited(board, list_of_moves, active_piece, monte_analysis_time_limit, 50000)
-    return best_monte_move
+    #@our_io_stream.puts "Move took #{Time.now - start_time}, found: #{ai_move}"
+    return ai_move
   end
 
   # this is a front end to iterative deepening that gets us a ranked list of moves
@@ -94,7 +99,7 @@ class Player
       trial_move_board = board.dup if @try_board_dup
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
-      subnode_best = -iterative_deepening_negamax_search(trial_move_board, swap_pieces(active_piece), @deepening_depth_limit, (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
+      subnode_best = -iterative_deepening_negamax_search(trial_move_board, swap_pieces(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
       trial_move_board.undo_move if !@try_board_dup
       sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
     end

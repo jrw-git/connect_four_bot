@@ -12,7 +12,7 @@ class ConnectFourEngine
   @@pause_length = 1
 
   def initialize(log_name, p1 = ConnectFour.setup_player(GameBoard::PlayerOneSymbol), p2 = ConnectFour.setup_player(GameBoard::PlayerTwoSymbol), bot_testing = false)
-    @hasher = ZobristHash.new
+
     if log_name != nil
       @log_enabled = true
       @log_name = log_name
@@ -33,14 +33,8 @@ class ConnectFourEngine
 
   def run_game
     end_of_game = false
-    @running_hash = @hasher.hash_entire_board(@board)
-    @reversed_hash = nil
     until end_of_game
       start_time = Time.now
-      new_board_hash = @hasher.hash_entire_board(@board)
-      puts "New Calc'd Hash: #{new_board_hash} TimeCalc:#{Time.now-start_time}"
-      puts "Running Total Hash: #{@running_hash} TimeCalc:#{Time.now-start_time}"
-      puts "Reversed Total Hash: #{@reversed_hash} TimeCalc:#{Time.now-start_time}"
       puts "Turn: #{@current_player}  Symbol:#{@current_player.piece}"
       end_of_game = next_move(@current_player)
       @current_player = swap_players
@@ -54,8 +48,6 @@ class ConnectFourEngine
     puts "action move 10000\n\n" if @bot_testing
     player_move = player.make_a_move(@board)
     @board.make_move(player_move, player.piece)
-    @running_hash = @hasher.hash_position_with_board(@running_hash, @board.last_move["height"], @board.last_move["width"], player.piece, @board)
-    @reversed_hash = @hasher.hash_position_with_board(@running_hash, @board.last_move["height"], @board.last_move["width"], player.piece, @board)
     puts
     if @board.is_there_a_win?
       if player.piece == GameBoard::PlayerOneSymbol
@@ -95,65 +87,71 @@ class ConnectFourEngine
   end
 
   def self.setup_player(player_symbol)
-    time_to_iterate = 0.5
-    use_aigames_interface = false
+    search_limit = 0.5
+    aigames_io = false
     use_heuristics = false
     puts "Select from the options for player #{player_symbol}:"
     puts "1) Human"
-    puts "2) Easy"
-    puts "3) Medium (AI Games Difficulty)"
+    puts "2) Easy - Negamax 6"
+    puts "3) Medium (AI Games Difficulty), Mixed Negamax and Monte Carlo"
     puts "4) You Specify Pure Negamax Search Depth"
-    puts "5) You Specify Mixed AI Length and Ratio"
+    puts "5) You Specify Iterative Negamax Time Limit"
+    puts "6) You Specify Mixed AI Time Limit"
+    puts "7) You Specify Monte Carlo AI Time Limit"
     print "Enter a number: "
     choice = $stdin.gets.chomp
     case choice
     when '1'
       return PlayerHuman.new("Human", player_symbol)
-    when 't'
-      monte_carlo = false
-      puts "How many plies deep will you let the AI search?"
-      print "Enter number of moves to search (2 minimum): "
-      time_to_iterate = $stdin.gets.chomp.to_f
-      if time_to_iterate < 2
-        time_to_iterate = 2
-      end
-      puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
-      return Player.new("AI:#{time_to_iterate}s Pure Nega With Heuristic", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, true)
     when '2'
-      monte_carlo = false
-      # hacky way of letting me set the depth of a straight negamax search from player setup
-      # use algorithm time limit as depth limit
-      depth_limit = 6
-      return Player.new("AI Negamax-#{depth_limit}", player_symbol, depth_limit, monte_carlo, use_aigames_interface, use_heuristics)
+      brain = "Negamax"
+      search_limit = 6
+      puts "Forcing AI to #{brain}, #{search_limit} moves ahead."
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '3'
-      monte_carlo = true
-      time_to_iterate = 0.7
-      return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
+      brain = "Mixed"
+      search_limit = 0.7
+      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '4'
-      monte_carlo = false
-      puts "How many plies deep will you let the AI search?"
-      print "Enter number of moves to search (2 minimum): "
-      time_to_iterate = $stdin.gets.chomp.to_f
-      if time_to_iterate < 2
-        time_to_iterate = 2
-      end
-      puts "Forcing AI to Negamax #{time_to_iterate} moves ahead."
-      # hacky way of letting me set the depth of a straight negamax search from player setup
-      # use algorithm time limit as depth limit
-      return Player.new("AI Negamax-#{time_to_iterate}", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
+      brain = "Negamax"
+      search_limit = get_depth_limit
+      puts "Forcing AI to #{brain}, #{search_limit} moves ahead."
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '5'
-      puts "How long will you let the AI think for? The higher the number the better the performance."
-      print "Enter number of seconds (2 minimum): "
-      time_to_iterate = $stdin.gets.chomp.to_f
-      if time_to_iterate < 2.0
-        time_to_iterate = 2.0
-      end
-      puts "Letting AI think for #{time_to_iterate} seconds per turn."
-      monte_carlo = true
-      return Player.new("AI:#{time_to_iterate}s (Monte Carlo + Negamax)", player_symbol, time_to_iterate, monte_carlo, use_aigames_interface, use_heuristics)
+      brain = "IterativeNegamax"
+      search_limit = get_time_limit
+      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+    when '6'
+      brain = "Mixed"
+      search_limit = get_time_limit
+      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+    when '7'
+      brain = "MonteCarlo"
+      search_limit = get_time_limit
+      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
+      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     else
       setup_player(player_symbol)
     end
+  end
+
+  def self.get_depth_limit
+    puts "How many plies deep will you let the AI search?"
+    print "Enter number of moves to search (2 minimum): "
+    search_limit = $stdin.gets.chomp.to_i
+    search_limit = 2 if search_limit < 2
+    return search_limit
+  end
+
+  def self.get_time_limit
+    puts "How long will you let the AI think for? The higher the number the better the performance."
+    print "Enter number of seconds (0.5 minimum): "
+    search_limit = $stdin.gets.chomp.to_f
+    search_limit = 0.5 if search_limit < 0.5
+    return search_limit
   end
 
   def log_game_results(p1_wins_add, p2_wins_add, draws_add, total_games_add)

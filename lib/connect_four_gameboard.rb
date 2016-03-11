@@ -1,6 +1,6 @@
 class GameBoard
 
-  attr_reader :board, :height, :width, :last_move, :last_player, :turns
+  attr_reader :board, :height, :width, :last_move, :last_player, :turns, :hash
 
   DefaultSymbol = '0'
   PlayerOneSymbol = '1'
@@ -19,6 +19,11 @@ class GameBoard
     @turns = current_turn.to_i
     @last_move = Hash.new
     @current_player = current_player
+
+    @hasher = ZobristHash.new
+    @hash = @hasher.hash_entire_board(@board)
+    @reversed_hash = nil
+
   end
 
   def initialize_dup(other)
@@ -107,6 +112,12 @@ class GameBoard
     @last_player = gamepiece
     @turns += 1
     @board[height][width] = gamepiece
+    @hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
+    #@reversed_hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
+    #puts "Running Total Hash: #{@hash}"
+    #puts "Reversed Total Hash: #{@reversed_hash}"
+    #new_hash = @hasher.hash_entire_board(@board)
+    #puts "New Calc'd Hash: #{new_hash}"
   end
 
   def undo_move(column, gamepiece)

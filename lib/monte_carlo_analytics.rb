@@ -8,7 +8,7 @@ module MonteCarloAnalysis
   # toggles a change between duping a board then discarding it when done
   # vs making a move, then unmaking a move, on the original board
 
-  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit)
+  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, print_result)
     #begin monte carlo analysis
     start_time = Time.now
     hash_of_moves = Hash.new
@@ -31,6 +31,10 @@ module MonteCarloAnalysis
     end
     # rank moves
     sorted = get_best_monte_carlo_result(hash_of_moves)
+    if print_result
+      @our_io_stream.puts "Monte Carlo Results:"
+      hash_of_moves.each { |x, move | @our_io_stream.puts "Move#{x}: #{move}" }
+    end
     @our_io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
     return sorted
   end
@@ -56,7 +60,7 @@ module MonteCarloAnalysis
     best_move = 0
     hash_of_moves.each do |key, subhash|
       if subhash["plays"] != 0.0
-        hash_of_moves[key]["percentage"] = subhash["wins"] / subhash["plays"].to_f * 1000.0
+        hash_of_moves[key]["percentage"] = subhash["wins"] / subhash["plays"].to_f * 100.0
       else
         hash_of_moves[key]["percentage"] = 0.0
       end
