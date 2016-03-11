@@ -13,7 +13,8 @@ class Node
     @hash = hash
   end
 
-  # CRAZY FUCKING BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
+  # Annoying, hard to track down bug when I was using <=>
+  # looks like nil items in the data structure cause it to go crazy
   # kept insisting that the "other" was a nil object.
   # switching to comparing values directly
   #def <=>(other)

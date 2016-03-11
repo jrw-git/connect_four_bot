@@ -43,30 +43,25 @@ class BotParser
         # 10000        500       player1,player2   player1   1        7    6
         @settings[instruction_array[1]] = instruction_array[2]
         if instruction_array[1] == "your_botid"
-          @bot_name = "AI-Monte-Carlo:#{@settings["your_bot"]}"
-          @time_limit = 0.7 #seconds
-          #@time_limit = 120 #seconds
-          @monte_carlo = true
-          @use_aigames_interface = true
-          @use_heuristics = false
+          @search_limit = 0.7 #seconds
+          #@search_limit = 120 #seconds
+          @aigames_io = true
+          @brain = "Mixed"
           @bot_id = @settings["your_botid"]
-          @our_bot = Player.new(@bot_name, @bot_id, @time_limit, @monte_carlo, @use_aigames_interface, @use_heuristics)
-          $stderr.puts "Bot name: #{@bot_name}, ID: #{@bot_id}, Time: #{@time_limit} MonteCarlo:#{@monte_carlo} AIGInterface:#{@use_aigames_interface}, Heuristics:#{@use_heuristics}"
+          @bot_name = "AI:#{@brain}-#{@search_limit}-#{@bot_id}."
+          @our_bot = Player.new(@bot_name, @bot_id, @brain, @search_limit, @aigames_io)
+          $stderr.puts "Bot name: #{@bot_name}, ID: #{@bot_id}"
+          $stderr.puts @our_bot
         end
-      when "update"
-        # THE SECOND THING FOUND IS "GAME"!!
-        # CANNOT JUST JUMP RIGHT INTO ARRAY[1]
+      when "update" # don't forget the "game" in the instruction line
         # update game round 1
         # update game field 0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0
         case instruction_array[2]
         when "round"
           @turn = instruction_array[3]
         when "field"
-          #$stderr.puts "Field processed, round #{@turn}, field: #{instruction_array[3]}"
           new_field = process_field_into_board(instruction_array[3])
           @our_gameboard = GameBoard.new(@settings["field_rows"], @settings["field_columns"], @bot_id, @turn, new_field)
-          #@our_gameboard.print_me
-          # need to give the board to something... nah made it an instance var
         else
           $stderr.puts "ERROR: Unknown update detected: #{instruction_array}"
         end
@@ -74,14 +69,12 @@ class BotParser
         # action move 10000   (10000 is timeleft)
         @time_left = instruction_array[2]
         @our_move = @our_bot.make_a_move(@our_gameboard) - 1
-
         $stdout.puts("place_disc #{@our_move}")
       else
         $stderr.puts "ERROR: Unknown instruction detected: #{instruction_array}"
       end
     end
   end
-
 end
 
 if __FILE__ == $0

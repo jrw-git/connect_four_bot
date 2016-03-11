@@ -13,25 +13,27 @@ class Player
   include MonteCarloAnalysis
   include NegamaxAnalysis
 
-  attr_reader :player_type, :piece
+  attr_reader :player_name, :piece
 
-  def initialize(player_type, symbol, brain_type, algorithm_limit, aigames_io)
+  def initialize(player_name, symbol, brain_type, algorithm_limit, aigames_io)
     @our_hasher = ZobristHash.new
     @try_board_dup = true
     @use_heuristics = false
-    @player_type = player_type
+    @player_name = player_name
     @piece = symbol
     @brain_type = brain_type
+    @algorithm_limit = algorithm_limit
+    @ratio_of_negamax_to_montecarlo = 0.5
+
     @our_io_stream = $stderr if aigames_io
     @our_io_stream = $stdout if !aigames_io
-    @algorithm_limit = algorithm_limit
     @lowest_score = Node.new(-1, -8192, 0, -1)
     @highest_score = Node.new(-1, 8192, 0, -1)
     @value_of_tie = Node.new(-1, 0, 0, -1)
     @value_of_win = Node.new(-1, -8192, 0, -1)
     @value_of_unknown = Node.new(-1, nil, 0, -1)
     @first_move = Node.new(4, 0, 0, -1)
-    @ratio_of_negamax_to_montecarlo = 0.5
+
     super()
   end
 
@@ -49,7 +51,7 @@ class Player
     # if this is the first turn, always move in the center.
     return @first_move if board.turns <= 1
     @our_io_stream.puts "Size of Transposition Table:#{@transposition_table.size}"
-    print_result = true
+    print_result = false
     start_time = Time.now
     case @brain_type
     when "MonteCarlo"
@@ -131,7 +133,8 @@ class Player
   end
 
   def to_s
-    @player_type
+    str = "Player:#{@player_name} Piece:#{@piece}, Brain:#{@brain_type}, Limit:#{@algorithm_limit}, Ratio:#{@ratio_of_negamax_to_montecarlo}, BoardDup?#{@try_board_dup}, Heuristics?##{@use_heuristics}"
+    return str
   end
 
 end

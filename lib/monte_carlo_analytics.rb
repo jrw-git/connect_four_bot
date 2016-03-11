@@ -8,7 +8,7 @@ module MonteCarloAnalysis
   # toggles a change between duping a board then discarding it when done
   # vs making a move, then unmaking a move, on the original board
 
-  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, print_result)
+  def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, print_result = false)
     #begin monte carlo analysis
     start_time = Time.now
     hash_of_moves = Hash.new

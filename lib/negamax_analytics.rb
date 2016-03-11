@@ -16,10 +16,10 @@ module NegamaxAnalysis
     @tables_on = true
     @enable_killer_moves = true
     @size_of_table = 10000
-    @transposition_table = Array.new(@size_of_table)
-    # if our previous depth search was within X (2.0 here) times of the time limit, don't start another
     @iterative_deepening_time_divider = 2.0
     @deepening_depth_limit = 20
+    @transposition_table = Array.new(@size_of_table)
+    # if our previous depth search was within X (2.0 here) times of the time limit, don't start another
     super()
   end
 
@@ -130,10 +130,7 @@ module NegamaxAnalysis
       subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
       @our_io_stream.puts "M#{move}:#{subnode_best}" if print_result
       trial_move_board.undo_move if !@try_board_dup
-      # CRAZY !@#$%^&* BUG IF I USED SPACESHIP OPERATOR TO COMPARE NODES DIRECTLY....
-      # kept insisting that the "other" was a nil object. switching to comparing values directly
-      # seriously spent hours on this !@#$%^&* bug
-      # looks like if you include any nil items in the data structure, the <=> goes bonkers
+      # looks like nil items make custom <=>'s go bonkers, switched to value comparison
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, move)
       end
