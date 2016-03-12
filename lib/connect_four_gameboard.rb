@@ -1,6 +1,6 @@
 class GameBoard
 
-  attr_reader :board, :height, :width, :last_move, :last_player, :turns, :hash
+  attr_reader :board, :height, :width, :turns, :hash, :last_move_array
 
   DefaultSymbol = '0'
   PlayerOneSymbol = '1'
@@ -18,6 +18,7 @@ class GameBoard
     end
     @turns = current_turn.to_i
     @last_move = Hash.new
+    @last_move_array = Array.new
     @current_player = current_player
 
     @hasher = ZobristHash.new
@@ -28,6 +29,7 @@ class GameBoard
 
   def initialize_dup(other)
     @original = false
+    @last_move_array = other.last_move_array.dup
     @height = other.height
     @width = other.width
     @board = Array.new(@height) { Array.new(@width, @default) }
@@ -47,9 +49,15 @@ class GameBoard
   def find_last_move_neighbors(h_shift, w_shift, total_radius)
     pre = ""
     post = ""
+    prev_move = @last_move_array[-1]
     (1..total_radius).each do |x|
+      #w = prev_move["width"]
+      #h = prev_move["height"]
       w = @last_move["width"]
       h = @last_move["height"]
+      if w != prev_move["width"] || h != prev_move["height"]
+        puts "Trad W/H (#{w}/#{h}). Alt (#{prev_move["width"]}/#{prev_move["height"]})"
+      end
       hs = h_shift*x
       ws = w_shift*x
       pre_char = get_piece((h-hs), (w-ws))
@@ -89,11 +97,13 @@ class GameBoard
   end
 
   def is_there_a_win?
-    #if @turns < 7
-    #  return false
-    #end
-    #if @last_move["width"] == nil
-    if @last_move == nil
+    if @turns < 7
+      return false
+    end
+    if @last_move["width"] == nil
+      return false
+    end
+    if @last_move_array.size <= 0
       return false
     end
     win = false
@@ -119,6 +129,7 @@ class GameBoard
 
   def place_piece(height, width, gamepiece)
     @last_move = {"height" => height, "width" => width}
+    @last_move_array.push({"height" => height, "width" => width, "player" => gamepiece})
     @last_player = gamepiece
     @turns += 1
     @board[height][width] = gamepiece
@@ -133,6 +144,8 @@ class GameBoard
   def undo_move(column, gamepiece)
     h = get_height_of_first_filled_location_in_column(column)
     remove_piece(h, column-1, gamepiece)
+    #prev_move = @last_move_array.pop
+    #remove_piece(prev_move["height"], prev_move["width"], prev_move["gamepiece"],)
   end
 
   def remove_piece(height, width, gamepiece)
