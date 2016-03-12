@@ -9,7 +9,7 @@ class ConnectFourEngine
 
   @@board_height = 6
   @@board_width = 7
-  @@pause_length = 1
+  @@pause_length = 2
 
   @@bot_testing = false
   @@log_game_results = false
@@ -154,10 +154,10 @@ class ConnectFourEngine
     open_log = File.open(@@log_name, 'r+')
     p1_wins += open_log.readline.chomp.to_i
     p2_wins += open_log.readline.chomp.to_i
-    tied_games += open_log.readline.chomp.to_i
+    draws += open_log.readline.chomp.to_i
     total_games += open_log.readline.chomp.to_i
     open_log.rewind
-    open_log.write("#{p1_wins}\n#{p2_wins}\n#{tied_games}\n#{total_games}\n")
+    open_log.write("#{p1_wins}\n#{p2_wins}\n#{draws}\n#{total_games}\n")
     open_log.close
   end
 

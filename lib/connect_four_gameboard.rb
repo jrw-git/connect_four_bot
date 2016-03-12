@@ -142,9 +142,7 @@ class GameBoard
     #puts "New Calc'd Hash: #{new_hash}"
   end
 
-  def undo_move(column, gamepiece)
-    #h = get_height_of_first_filled_location_in_column(column)
-    #remove_piece(h, column-1, gamepiece)
+  def undo_move
     prev_move = @last_move_array.pop
     #puts "Undo Move: Prev move:#{prev_move}"
     remove_piece(prev_move["height"], prev_move["width"], prev_move["player"])

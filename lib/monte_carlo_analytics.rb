@@ -8,6 +8,46 @@ module MonteCarloAnalysis
   # toggles a change between duping a board then discarding it when done
   # vs making a move, then unmaking a move, on the original board
 
+  # this is a front end to iterative deepening that gets us a ranked list of moves
+  # normally we just get the best move, not a list
+  # we then can process the list for just winning, just okay, or just losing moves
+  # to further explore
+  def initialize
+    @ratio_of_negamax_to_montecarlo = 0.5
+    super()
+  end
+
+  def get_negamax_ranked_moves(board, active_piece, time_limit, print_result)
+    start_time = Time.now
+    sorted_list = Array.new
+    board.get_available_moves.each do |move|
+      trial_move_board = nil
+      trial_move_board = board.dup if @try_board_dup
+      trial_move_board = board if !@try_board_dup
+      trial_move_board.make_move(move, active_piece)
+      subnode_best = -iterative_deepening_negamax_search(trial_move_board, swap_pieces(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
+      trial_move_board.undo_move if !@try_board_dup
+      sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
+    end
+    sorted_list.sort_by! { |object| object.value }
+    return sorted_list
+  end
+
+  def select_best_move_set(list_of_sorted_moves)
+    winning_moves = list_of_sorted_moves.map { |node| node.move if node.value > 0 }.compact
+    okay_moves = list_of_sorted_moves.map { |node| node.move if node.value == 0 }.compact
+    losing_moves = list_of_sorted_moves.map { |node| node.move if node.value < 0 }.compact
+    if winning_moves.size > 0
+      puts "Winning moves seen:#{winning_moves}"
+      return winning_moves
+    elsif okay_moves.size > 0
+      return okay_moves
+    else
+      puts "Losing moves seen:#{losing_moves}"
+      return losing_moves
+    end
+  end
+
   def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, print_result = false)
     #begin monte carlo analysis
     start_time = Time.now
@@ -32,10 +72,10 @@ module MonteCarloAnalysis
     # rank moves
     sorted = get_best_monte_carlo_result(hash_of_moves)
     if print_result
-      @our_io_stream.puts "Monte Carlo Results:"
-      hash_of_moves.each { |x, move | @our_io_stream.puts "Move#{x}: #{move}" }
+      puts "Monte Carlo Results:"
+      hash_of_moves.each { |x, move | puts "Move#{x}: #{move}" }
     end
-    @our_io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
+    puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
     return sorted
   end
 
@@ -51,7 +91,7 @@ module MonteCarloAnalysis
       move = list_of_moves[random_index]
       trial_move_board.make_move(move, current_player)
       subtree_node = -simulate_monte_carlo_playout(trial_move_board, trial_move_board.get_available_moves, current_player)
-      trial_move_board.undo_move(move, current_player) if !@try_board_dup
+      trial_move_board.undo_move if !@try_board_dup
       return Node.new(move, subtree_node.value, subtree_node.depth+1, subtree_node)
   end
 

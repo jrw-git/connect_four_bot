@@ -12,14 +12,23 @@ module NegamaxAnalysis
   # depends on a BUNCH of parent variables....
 
   def initialize
-    @killer_moves = Hash.new
-    @tables_on = false
+    @killer_moves = Array.new(2) { Hash.new }
+    @enable_transposition_tables = false
     @enable_killer_moves = true
+    @enable_alpha_beta = true
+    @enable_move_sorting = true
+    @enable_heuristics = false # bugged due to win-check optimization
     @size_of_table = 1000
-    @iterative_deepening_time_divider = 2.0
+
     @deepening_depth_limit = 20
     @transposition_table = Array.new(@size_of_table)
-    # if our previous depth search was within X (2.0 here) times of the time limit, don't start another
+    @lowest_score = Node.new(-1, -8192, 0, -1)
+    @highest_score = Node.new(-1, 8192, 0, -1)
+    @value_of_tie = Node.new(-1, 0, 0, -1)
+    @value_of_win = Node.new(-1, -8192, 0, -1)
+    @value_of_unknown = Node.new(-1, nil, 0, -1)
+    # don't start another search if last was more than 1/Xth the max time
+    @iterative_deepening_stop_ratio = 2.0
     super()
   end
 
@@ -43,7 +52,7 @@ module NegamaxAnalysis
   end
 
   def heuristic_value(board, piece)
-    return @value_of_tie if !@use_heuristics
+    return @value_of_tie if !@enable_heuristics
     strings = board.get_cached_neighbors
     piece = swap_pieces(piece)
     super_combo = 0
@@ -72,11 +81,10 @@ module NegamaxAnalysis
     start_time = Time.now
     # repeatedly call negamax with increasing depth,
     # will return the best move found on the last level of depth called
-    while ( (Time.now - start_time) <= (time_limit/@iterative_deepening_time_divider) )
+    while ( (Time.now - start_time) <= (time_limit/@iterative_deepening_stop_ratio) )
       depth_best_move = @lowest_score
-      #board_hash = @our_hasher.hash_entire_board(board)
       subnode_best = negamax(board, active_piece, current_depth, alpha, beta)
-      @our_io_stream.puts "ID#{current_depth}: #{subnode_best}" if print_result
+      puts "ID#{current_depth}: #{subnode_best}" if print_result
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, subnode_best.move)
       end
@@ -85,7 +93,7 @@ module NegamaxAnalysis
         return depth_best_move
       end
     end
-    #@our_io_stream.puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{depth_best_move} in #{(Time.now - start_time)} seconds."
+    #puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{depth_best_move} in #{(Time.now - start_time)} seconds."
     return depth_best_move
   end
 
@@ -99,27 +107,27 @@ module NegamaxAnalysis
     start_time = Time.now
     hash = board.hash
     previous_best_move = nil
-    if @tables_on
+    if @enable_transposition_tables
       hash_lookup_result = lookup_hash(hash, depth, alpha, beta)
-    end
-    if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] >= depth
-      #puts "Got a valid position from table using zobrist hash"
-      flag = hash_lookup_result["flag"]
-      previous_best_move = hash_lookup_result["value"]
-      case flag
-      when "Exact"
-        return hash_lookup_result["value"]
-      when "Lower"
-        if alpha.value < hash_lookup_result["alpha"]
-          alpha = hash_lookup_result["value"]
+      if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] >= depth
+        #puts "Got a valid position from table using zobrist hash"
+        flag = hash_lookup_result["flag"]
+        previous_best_move = hash_lookup_result["value"]
+        case flag
+        when "Exact"
+          return hash_lookup_result["value"]
+        when "Lower"
+          if alpha.value < hash_lookup_result["alpha"]
+            alpha = hash_lookup_result["value"]
+          end
+        when "Upper"
+          if beta.value > hash_lookup_result["beta"]
+            beta = hash_lookup_result["value"]
+          end
         end
-      when "Upper"
-        if beta.value > hash_lookup_result["beta"]
-          beta = hash_lookup_result["value"]
+        if alpha.value > beta.value
+          return hash_lookup_result["value"]
         end
-      end
-      if alpha.value > beta.value
-        return hash_lookup_result["value"]
       end
     end
     # win/tie check, return a value if found
@@ -128,7 +136,7 @@ module NegamaxAnalysis
     depth_best_move = @lowest_score
     list_of_moves = board.get_available_moves
     # move sorting
-    sort_moves(list_of_moves, depth, previous_best_move) if true
+    sort_moves(list_of_moves, depth, previous_best_move) if @enable_move_sorting
     # iterate over possible moves and get their values (down to depth limit)
     list_of_moves.each do |move|
       trial_move_board = nil
@@ -136,31 +144,41 @@ module NegamaxAnalysis
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
       subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
-      @our_io_stream.puts "M#{move}:#{subnode_best}" if print_result
-      trial_move_board.undo_move(move, active_piece) if !@try_board_dup
+      puts "M#{move}:#{subnode_best}" if print_result
+      trial_move_board.undo_move if !@try_board_dup
       # looks like nil items make custom <=>'s go bonkers, switched to value comparison
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, move)
       end
-      # alpha beta
-      if depth_best_move.value >= beta.value
-        @killer_moves[depth] = depth_best_move if @enable_killer_moves
+      # alpha beta (and killer moves)
+      if depth_best_move.value >= beta.value && @enable_alpha_beta
+        if @enable_killer_moves
+          # storing two killer moves, but only if they are different than the move currently considered
+          if depth_best_move.move != @killer_moves[1][depth] && depth_best_move.move != @killer_moves[0][depth]
+            @killer_moves[0][depth] = @killer_moves[1][depth]
+            @killer_moves[1][depth] = depth_best_move
+          end
+        end
+        # Beta cutoff, break out of this level
         break
       end
-      if depth_best_move.value > alpha.value
+      if depth_best_move.value > alpha.value && @enable_alpha_beta
+        # new local alpha was found
         alpha = depth_best_move
       end
     end
-    # make a flag
-    flag = ""
-    if depth_best_move.value <= alpha.value
-      flag = "Upper"
-    elsif depth_best_move.value >= beta.value
-      flag = "Lower"
-    else
-      flag = "Exact"
+    if @enable_transposition_tables
+      # make a flag for the hash table indicating if it's an exact value
+      flag = ""
+      if depth_best_move.value <= alpha.value
+        flag = "Upper"
+      elsif depth_best_move.value >= beta.value
+        flag = "Lower"
+      else
+        flag = "Exact"
+      end
+      store_hash(hash, depth, depth_best_move, alpha, beta, flag)
     end
-    store_hash(hash, depth, depth_best_move, alpha, beta, flag) if @tables_on
     return depth_best_move
   end
 
@@ -190,7 +208,7 @@ module NegamaxAnalysis
     if list_of_moves.delete(4)
       list_of_moves.unshift(4)
     end
-    if @tables_on && hash_lookup_result
+    if @enable_transposition_tables && hash_lookup_result
       possible_move = hash_lookup_result
       if list_of_moves.include?(possible_move.move)
         list_of_moves.delete(possible_move.move)
@@ -198,13 +216,21 @@ module NegamaxAnalysis
         #puts "Found previous best move, shifting it"
       end
     end
-    if @enable_killer_moves && @killer_moves[depth] != nil
-      possible_move = @killer_moves[depth]
+    if @enable_killer_moves && @killer_moves[0][depth] != nil
+      possible_move = @killer_moves[0][depth]
       if list_of_moves.include?(possible_move.move)
         list_of_moves.delete(possible_move.move)
         list_of_moves.unshift(possible_move.move)
       end
     end
+    if @enable_killer_moves && @killer_moves[1][depth] != nil
+      possible_move = @killer_moves[1][depth]
+      if list_of_moves.include?(possible_move.move)
+        list_of_moves.delete(possible_move.move)
+        list_of_moves.unshift(possible_move.move)
+      end
+    end
+
     return list_of_moves
   end
 
