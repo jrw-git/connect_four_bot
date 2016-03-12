@@ -15,7 +15,7 @@ module NegamaxAnalysis
     @killer_moves = Hash.new
     @tables_on = true
     @enable_killer_moves = true
-    @size_of_table = 10000
+    @size_of_table = 100000
     @iterative_deepening_time_divider = 2.0
     @deepening_depth_limit = 20
     @transposition_table = Array.new(@size_of_table)
@@ -27,17 +27,22 @@ module NegamaxAnalysis
     modulod_hash = hash % @size_of_table
     #puts "Table:#{@transposition_table[modulod_hash]} Class:#{@transposition_table[modulod_hash].class} Nil?#{@transposition_table[modulod_hash] == nil}"
     if @transposition_table[modulod_hash] != nil
+      table_hash = @transposition_table[modulod_hash]["hash"]
+      if table_hash != hash
+        #puts "Hash collision! Ourhash: #{hash} %(#{hash % @size_of_table}) TableHash:#{table_hash} %(#{table_hash % @size_of_table})"
+        return nil
+      end
       return @transposition_table[modulod_hash]
     end
     return nil
   end
 
   def store_hash(hash, depth, value, alpha, beta, flag)
-    @transposition_table[hash % @size_of_table] = { "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
+    @transposition_table[hash % @size_of_table] = { "hash" => hash, "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
     #puts "Hash stored: #{hash}, entry: #{@transposition_table[hash]}, entire table:#{@transposition_table}"
   end
 
-  def heuristic_value(board, piece) #p is piece
+  def heuristic_value(board, piece)
     return @value_of_tie if !@use_heuristics
     strings = board.get_cached_neighbors
     piece = swap_pieces(piece)
@@ -93,11 +98,14 @@ module NegamaxAnalysis
     @recursion_counter += 1
     start_time = Time.now
     hash = board.hash
+    previous_best_move = nil
     if @tables_on
       hash_lookup_result = lookup_hash(hash, depth, alpha, beta)
     end
-    if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] == depth
+    if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] >= depth
+      #puts "Got a valid position from table using zobrist hash"
       flag = hash_lookup_result["flag"]
+      previous_best_move = hash_lookup_result["value"]
       case flag
       when "Exact"
         return hash_lookup_result["value"]
@@ -120,7 +128,7 @@ module NegamaxAnalysis
     depth_best_move = @lowest_score
     list_of_moves = board.get_available_moves
     # move sorting
-    sort_moves(list_of_moves, depth) if true
+    sort_moves(list_of_moves, depth, previous_best_move) if true
     # iterate over possible moves and get their values (down to depth limit)
     list_of_moves.each do |move|
       trial_move_board = nil
@@ -129,7 +137,7 @@ module NegamaxAnalysis
       trial_move_board.make_move(move, active_piece)
       subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
       @our_io_stream.puts "M#{move}:#{subnode_best}" if print_result
-      trial_move_board.undo_move if !@try_board_dup
+      trial_move_board.undo_move(move, active_piece) if !@try_board_dup
       # looks like nil items make custom <=>'s go bonkers, switched to value comparison
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, move)
@@ -166,7 +174,7 @@ module NegamaxAnalysis
     return nil
   end
 
-  def sort_moves(list_of_moves, depth)
+  def sort_moves(list_of_moves, depth, hash_lookup_result)
     if list_of_moves.delete(2)
       list_of_moves.unshift(2)
     end
@@ -182,7 +190,15 @@ module NegamaxAnalysis
     if list_of_moves.delete(4)
       list_of_moves.unshift(4)
     end
-    if @killer_moves[depth] != nil && @enable_killer_moves
+    if @tables_on && hash_lookup_result
+      possible_move = hash_lookup_result
+      if list_of_moves.include?(possible_move.move)
+        list_of_moves.delete(possible_move.move)
+        list_of_moves.unshift(possible_move.move)
+        #puts "Found previous best move, shifting it"
+      end
+    end
+    if @enable_killer_moves && @killer_moves[depth] != nil
       possible_move = @killer_moves[depth]
       if list_of_moves.include?(possible_move.move)
         list_of_moves.delete(possible_move.move)

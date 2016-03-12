@@ -88,7 +88,7 @@ class ConnectFourEngine
   def self.setup_player(player_symbol)
     search_limit = 0.5
     aigames_io = false
-    use_heuristics = false
+    new_player = nil
     puts "Select from the options for player #{player_symbol}:"
     puts "1) Human"
     puts "2) Easy - Negamax 6"
@@ -96,45 +96,41 @@ class ConnectFourEngine
     puts "4) You Specify Pure Negamax Search Depth"
     puts "5) You Specify Iterative Negamax Time Limit"
     puts "6) You Specify Mixed AI Time Limit"
-    puts "7) You Specify Monte Carlo AI Time Limit"
+    puts "7) You Specify Pure Monte Carlo AI Time Limit"
     print "Enter a number: "
     choice = $stdin.gets.chomp
     case choice
     when '1'
-      return PlayerHuman.new("Human", player_symbol)
+      new_player = PlayerHuman.new("Human", player_symbol)
     when '2'
       brain = "Negamax"
       search_limit = 6
-      puts "Forcing AI to #{brain}, #{search_limit} moves ahead."
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '3'
       brain = "Mixed"
       search_limit = 0.7
-      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '4'
       brain = "Negamax"
       search_limit = get_depth_limit
-      puts "Forcing AI to #{brain}, #{search_limit} moves ahead."
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '5'
       brain = "IterativeNegamax"
       search_limit = get_time_limit
-      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '6'
       brain = "Mixed"
       search_limit = get_time_limit
-      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     when '7'
       brain = "MonteCarlo"
       search_limit = get_time_limit
-      puts "Forcing AI to #{brain}, #{search_limit} seconds per turn"
-      return Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
+      new_player = Player.new("AI:#{brain}-#{search_limit}.", player_symbol, brain, search_limit, aigames_io)
     else
       setup_player(player_symbol)
     end
+    puts "Forcing AI to #{brain}, limit: #{search_limit}."
+    return new_player
   end
 
   def self.get_depth_limit
@@ -153,25 +149,15 @@ class ConnectFourEngine
     return search_limit
   end
 
-  def log_game_results(p1_wins_add, p2_wins_add, draws_add, total_games_add)
+  def log_game_results(p1_wins, p2_wins, draws, total_games)
     puts "Logging results to file #{@@log_name}"
     open_log = File.open(@@log_name, 'r+')
-    p1_wins = open_log.readline.chomp.to_i
-    p2_wins = open_log.readline.chomp.to_i
-    tied_games = open_log.readline.chomp.to_i
-    total_games = open_log.readline.chomp.to_i
-
-    p1_wins += p1_wins_add
-    p2_wins += p2_wins_add
-    tied_games += draws_add
-    total_games += total_games_add
-
+    p1_wins += open_log.readline.chomp.to_i
+    p2_wins += open_log.readline.chomp.to_i
+    tied_games += open_log.readline.chomp.to_i
+    total_games += open_log.readline.chomp.to_i
     open_log.rewind
-
-    open_log.write("#{p1_wins}\n")
-    open_log.write("#{p2_wins}\n")
-    open_log.write("#{tied_games}\n")
-    open_log.write("#{total_games}\n")
+    open_log.write("#{p1_wins}\n#{p2_wins}\n#{tied_games}\n#{total_games}\n")
     open_log.close
   end
 

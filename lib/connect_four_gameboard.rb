@@ -52,8 +52,17 @@ class GameBoard
       h = @last_move["height"]
       hs = h_shift*x
       ws = w_shift*x
-      pre += get_piece((h-hs), (w-ws))
-      post += get_piece((h+hs), (w+ws))
+      pre_char = get_piece((h-hs), (w-ws))
+      post_char = get_piece((h+hs), (w+ws))
+      # this HUGELY speeds up win checking but will TOTALLY break Heuristics
+      # in that it won't report on sequences with open spots in them
+      if pre_char != @last_player && post_char != @last_player
+        break
+      end
+      pre += pre_char
+      post += post_char
+      #pre += get_piece((h-hs), (w-ws))
+      #post += get_piece((h+hs), (w+ws))
     end
     # was getting a hilarious bug because I didn't think through the pre + post sequencing. pre needs reversal.
     return pre.reverse + @last_player + post
@@ -83,7 +92,8 @@ class GameBoard
     #if @turns < 7
     #  return false
     #end
-    if @last_move["width"] == nil
+    #if @last_move["width"] == nil
+    if @last_move == nil
       return false
     end
     win = false
