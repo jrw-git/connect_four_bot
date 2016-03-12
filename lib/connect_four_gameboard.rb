@@ -17,7 +17,7 @@ class GameBoard
       @board = board_array
     end
     @turns = current_turn.to_i
-    @last_move = Hash.new
+    #@last_move = Hash.new
     @last_move_array = Array.new
     @current_player = current_player
 
@@ -51,20 +51,20 @@ class GameBoard
     post = ""
     prev_move = @last_move_array[-1]
     (1..total_radius).each do |x|
-      #w = prev_move["width"]
-      #h = prev_move["height"]
-      w = @last_move["width"]
-      h = @last_move["height"]
-      if w != prev_move["width"] || h != prev_move["height"]
-        puts "Trad W/H (#{w}/#{h}). Alt (#{prev_move["width"]}/#{prev_move["height"]})"
-      end
+      w = prev_move["width"]
+      h = prev_move["height"]
+      #w = @last_move["width"]
+      #h = @last_move["height"]
+      #if w != prev_move["width"] || h != prev_move["height"]
+      #  puts "Trad W/H (#{w}/#{h}). Alt (#{prev_move["width"]}/#{prev_move["height"]})"
+      #end
       hs = h_shift*x
       ws = w_shift*x
       pre_char = get_piece((h-hs), (w-ws))
       post_char = get_piece((h+hs), (w+ws))
       # this HUGELY speeds up win checking but will TOTALLY break Heuristics
       # in that it won't report on sequences with open spots in them
-      if pre_char != @last_player && post_char != @last_player
+      if pre_char != prev_move["player"] && post_char != prev_move["player"]
         break
       end
       pre += pre_char
@@ -73,7 +73,7 @@ class GameBoard
       #post += get_piece((h+hs), (w+ws))
     end
     # was getting a hilarious bug because I didn't think through the pre + post sequencing. pre needs reversal.
-    return pre.reverse + @last_player + post
+    return pre.reverse + prev_move["player"] + post
   end
 
   def get_cached_neighbors
@@ -100,16 +100,17 @@ class GameBoard
     if @turns < 7
       return false
     end
-    if @last_move["width"] == nil
-      return false
-    end
+    #if @last_move["width"] == nil
+    #  return false
+    #end
     if @last_move_array.size <= 0
       return false
     end
     win = false
     @all_neighbors_array = get_all_neighbors(3)
     (0...@all_neighbors_array.size).each do |x|
-      win = win || check_string_for_win(@last_player, @all_neighbors_array[x])
+      #win = win || check_string_for_win(@last_player, @all_neighbors_array[x])
+      win = win || check_string_for_win(@last_move_array[-1]["player"], @all_neighbors_array[x])
     end
     return win
   end
@@ -128,9 +129,9 @@ class GameBoard
   end
 
   def place_piece(height, width, gamepiece)
-    @last_move = {"height" => height, "width" => width}
+    #@last_move = {"height" => height, "width" => width}
     @last_move_array.push({"height" => height, "width" => width, "player" => gamepiece})
-    @last_player = gamepiece
+    #@last_player = gamepiece
     @turns += 1
     @board[height][width] = gamepiece
     @hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
@@ -142,22 +143,24 @@ class GameBoard
   end
 
   def undo_move(column, gamepiece)
-    h = get_height_of_first_filled_location_in_column(column)
-    remove_piece(h, column-1, gamepiece)
-    #prev_move = @last_move_array.pop
-    #remove_piece(prev_move["height"], prev_move["width"], prev_move["gamepiece"],)
+    #h = get_height_of_first_filled_location_in_column(column)
+    #remove_piece(h, column-1, gamepiece)
+    prev_move = @last_move_array.pop
+    #puts "Undo Move: Prev move:#{prev_move}"
+    remove_piece(prev_move["height"], prev_move["width"], prev_move["player"])
   end
 
   def remove_piece(height, width, gamepiece)
     check = @board[height][width]
     if check != gamepiece
-      puts "Error removing piece, board is now FUBAR"
+      puts "Error removing piece, board is now FUBAR. Board:#{check} Expected#{gamepiece}"
       exit
     end
+    @hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
     @board[height][width] = DefaultSymbol
     @turns -= 1
-    @last_move = nil
-    @last_player = nil
+  #  @last_move = nil
+  #  @last_player = nil
   end
 
   def get_height_of_first_filled_location_in_column(column)

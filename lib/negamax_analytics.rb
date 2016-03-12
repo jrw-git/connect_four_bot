@@ -13,9 +13,9 @@ module NegamaxAnalysis
 
   def initialize
     @killer_moves = Hash.new
-    @tables_on = true
+    @tables_on = false
     @enable_killer_moves = true
-    @size_of_table = 100000
+    @size_of_table = 1000
     @iterative_deepening_time_divider = 2.0
     @deepening_depth_limit = 20
     @transposition_table = Array.new(@size_of_table)

@@ -50,7 +50,7 @@ class Player
   def ai_main_loop(board, active_piece, time_limit)
     # if this is the first turn, always move in the center.
     return @first_move if board.turns <= 1
-    @our_io_stream.puts "Size of Transposition Table:#{@transposition_table.size}"
+    #@our_io_stream.puts "Size of Transposition Table:#{@transposition_table.size}"
     print_result = false
     start_time = Time.now
     case @brain_type
@@ -58,12 +58,12 @@ class Player
       list_of_moves = board.get_available_moves
       max_games = 50000
       ai_move = monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, max_games, print_result)
-      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+      @our_io_stream.puts "Time Excess: #{(Time.now - start_time) - time_limit}"
     when "Negamax"
       ai_move = negamax(board, active_piece, time_limit, @lowest_score, @highest_score, print_result)
     when "IterativeNegamax"
       ai_move = iterative_deepening_negamax_search(board, active_piece, time_limit, @lowest_score, @highest_score, print_result)
-      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+      @our_io_stream.puts "Time Excess: #{(Time.now - start_time) - time_limit}"
     when "Mixed"
       nega_analysis_time_limit = time_limit * @ratio_of_negamax_to_montecarlo
       nega_analysis_start_time = Time.now
@@ -80,7 +80,7 @@ class Player
       # take our set of moves and analyse them with monte carlo
       monte_analysis_time_limit = (time_limit * (1-@ratio_of_negamax_to_montecarlo)) + bonus_time
       ai_move = monte_carlo_time_limited(board, list_of_moves, active_piece, monte_analysis_time_limit, 50000, print_result)
-      puts "Time Excess: #{(Time.now - start_time) - time_limit}"
+      @our_io_stream.puts "Time Excess: #{(Time.now - start_time) - time_limit}"
     else
       @our_io_stream.puts "Unknown brain type for AI: #{@brain_type}. Exiting."
       exit
