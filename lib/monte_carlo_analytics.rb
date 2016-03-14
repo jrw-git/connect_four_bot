@@ -21,11 +21,10 @@ module MonteCarloAnalysis
     sorted_list = Array.new
     board.get_available_moves.each do |move|
       trial_move_board = nil
-      trial_move_board = board.dup if @try_board_dup
-      trial_move_board = board if !@try_board_dup
+      # duping the board and discarding it rather than make/undo moves
+      trial_move_board = board.dup
       trial_move_board.make_move(move, active_piece)
       subnode_best = -iterative_deepening_negamax_search(trial_move_board, board.change_players(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
-      trial_move_board.undo_move if !@try_board_dup
       sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
     end
     sorted_list.sort_by! { |object| object.value }

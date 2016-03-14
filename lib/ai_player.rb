@@ -17,7 +17,6 @@ class Player
 
   def initialize(player_name, symbol, brain_type, algorithm_limit, aigames_io)
     @our_hasher = ZobristHash.new
-    @try_board_dup = true
     @player_name = player_name
     @piece = symbol
     @brain_type = brain_type

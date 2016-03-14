@@ -2,15 +2,15 @@
 require_relative "node"
 
 module NegamaxAnalysis
-  
+
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
-    @enable_transposition_tables = false
+    @enable_transposition_tables = true
     @enable_killer_moves = true
     @enable_alpha_beta = true
     @enable_move_sorting = true
     @enable_heuristics = false # bugged due to win-check optimization
-    @size_of_table = 1000
+    @size_of_table = 10000
 
     @deepening_depth_limit = 20
     @transposition_table = Array.new(@size_of_table)
@@ -131,13 +131,12 @@ module NegamaxAnalysis
     sort_moves(list_of_moves, depth, previous_best_move) if @enable_move_sorting
     # iterate over possible moves and get their values (down to depth limit)
     list_of_moves.each do |move|
-      trial_move_board = nil
-      trial_move_board = board.dup if @try_board_dup
-      trial_move_board = board if !@try_board_dup
+      # we are making/undoing moves rather than duping the board, better performance
+      trial_move_board = board
       trial_move_board.make_move(move, active_piece)
       subnode_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
       puts "M#{move}:#{subnode_best}" if print_result
-      trial_move_board.undo_move if !@try_board_dup
+      trial_move_board.undo_move
       # looks like nil items make custom <=>'s go bonkers, switched to value comparison
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, move)
