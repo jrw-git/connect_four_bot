@@ -1,22 +1,21 @@
 require_relative "node"
 
+# first we run a quick negamax analysis for winning/losing moves
+# we devote no more than half the time alloted in this negamax search
+# in the other half, we do a very basic monte carlo analysis
+
 module MonteCarloAnalysis
 
-  # CURRENTLY DEPENDS ON PARENT FUNCTION swap_pieces(current_player)
 
-  # try_board_dup is for optimization testing
-  # toggles a change between duping a board then discarding it when done
-  # vs making a move, then unmaking a move, on the original board
-
-  # this is a front end to iterative deepening that gets us a ranked list of moves
-  # normally we just get the best move, not a list
-  # we then can process the list for just winning, just okay, or just losing moves
-  # to further explore
   def initialize
     @ratio_of_negamax_to_montecarlo = 0.5
     super()
   end
 
+  # this is a front end to iterative deepening that gets us a ranked list of moves
+  # normally we just get the best move, not a list
+  # we then can process the list for just winning, just okay, or just losing moves
+  # to further explore
   def get_negamax_ranked_moves(board, active_piece, time_limit, print_result)
     start_time = Time.now
     sorted_list = Array.new
@@ -25,7 +24,7 @@ module MonteCarloAnalysis
       trial_move_board = board.dup if @try_board_dup
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
-      subnode_best = -iterative_deepening_negamax_search(trial_move_board, swap_pieces(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
+      subnode_best = -iterative_deepening_negamax_search(trial_move_board, board.change_players(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
       trial_move_board.undo_move if !@try_board_dup
       sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
     end
@@ -85,7 +84,7 @@ module MonteCarloAnalysis
       # a negative gets flipped to a positive by the recursive call
       return Node.new(-1, -1, 0, -1) if win
       return Node.new(-1, 0, 0, -1) if tie
-      current_player = self.swap_pieces(current_player)
+      current_player = trial_move_board.change_players(current_player)
       # get a random move from the list of good moves to make
       random_index = Random.rand(list_of_moves.size)
       move = list_of_moves[random_index]

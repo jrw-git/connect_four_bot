@@ -38,6 +38,14 @@ class GameBoard
     end
   end
 
+  def change_players(active_piece)
+    if active_piece == GameBoard::PlayerOneSymbol
+      GameBoard::PlayerTwoSymbol
+    else
+      GameBoard::PlayerOneSymbol
+    end
+  end
+
   def get_piece(h, w)
     if h >= @height || w >= @width || h < 0 || w < 0
       return ""

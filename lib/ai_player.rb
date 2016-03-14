@@ -77,14 +77,6 @@ class Player
     return ai_move
   end
 
-  def swap_pieces(active_piece)
-    if active_piece == GameBoard::PlayerOneSymbol
-      GameBoard::PlayerTwoSymbol
-    else
-      GameBoard::PlayerOneSymbol
-    end
-  end
-
   def to_s
     str = "Player:#{@player_name} Piece:#{@piece}, Brain:#{@brain_type}, Limit:#{@algorithm_limit}"
     return str

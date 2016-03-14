@@ -2,15 +2,7 @@
 require_relative "node"
 
 module NegamaxAnalysis
-
-  # CURRENTLY DEPENDS ON PARENT FUNCTION swap_pieces(current_player)
-
-  # try_board_dup is for optimization testing
-  # toggles a change between duping a board then discarding it when done
-  # vs making a move, then unmaking a move, on the original board
-
-  # depends on a BUNCH of parent variables....
-
+  
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
     @enable_transposition_tables = false
@@ -54,7 +46,7 @@ module NegamaxAnalysis
   def heuristic_value(board, piece)
     return @value_of_tie if !@enable_heuristics
     strings = board.get_cached_neighbors
-    piece = swap_pieces(piece)
+    piece = board.change_players(piece)
     super_combo = 0
     high_value_combo = 0
     med_value_combo = 0
@@ -143,7 +135,7 @@ module NegamaxAnalysis
       trial_move_board = board.dup if @try_board_dup
       trial_move_board = board if !@try_board_dup
       trial_move_board.make_move(move, active_piece)
-      subnode_best = -negamax(trial_move_board, swap_pieces(active_piece), depth-1, -beta, -alpha)
+      subnode_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
       puts "M#{move}:#{subnode_best}" if print_result
       trial_move_board.undo_move if !@try_board_dup
       # looks like nil items make custom <=>'s go bonkers, switched to value comparison
