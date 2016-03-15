@@ -7,6 +7,7 @@ class GameBoard
   PlayerTwoSymbol = '2'
 
   def initialize(height, width, current_player, current_turn = 1, board_array = nil)
+    @enable_win_check_optimization = true
     @all_neighbors_array = Array.new
     @original = true
     @height = height.to_i
@@ -61,19 +62,16 @@ class GameBoard
     (1..total_radius).each do |x|
       w = prev_move["width"]
       h = prev_move["height"]
-      #w = @last_move["width"]
-      #h = @last_move["height"]
-      #if w != prev_move["width"] || h != prev_move["height"]
-      #  puts "Trad W/H (#{w}/#{h}). Alt (#{prev_move["width"]}/#{prev_move["height"]})"
-      #end
       hs = h_shift*x
       ws = w_shift*x
       pre_char = get_piece((h-hs), (w-ws))
       post_char = get_piece((h+hs), (w+ws))
       # this HUGELY speeds up win checking but will TOTALLY break Heuristics
       # in that it won't report on sequences with open spots in them
-      if pre_char != prev_move["player"] && post_char != prev_move["player"]
-        break
+      if @enable_win_check_optimization
+        if pre_char != prev_move["player"] && post_char != prev_move["player"]
+          break
+        end
       end
       pre += pre_char
       post += post_char

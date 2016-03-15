@@ -6,27 +6,27 @@ module NegamaxAnalysis
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
     @enable_transposition_tables = true
+    @enable_limited_table_replacement = false
     @enable_killer_moves = true
     @enable_alpha_beta = true
     @enable_move_sorting = true
     @enable_heuristics = false # bugged due to win-check optimization
-    @size_of_table = 10000
+    @size_of_table = 100000
 
-    @deepening_depth_limit = 20
+    @iterative_depth_limit = 20
     @transposition_table = Array.new(@size_of_table)
-    @lowest_score = Node.new(-1, -8192, 0, -1)
-    @highest_score = Node.new(-1, 8192, 0, -1)
+    @lowest_score = Node.new(-1, -1073741824, 0, -1)
+    @highest_score = Node.new(-1, 1073741824, 0, -1)
     @value_of_tie = Node.new(-1, 0, 0, -1)
-    @value_of_win = Node.new(-1, -8192, 0, -1)
+    @value_of_win = Node.new(-1, -1073741824, 0, -1)
     @value_of_unknown = Node.new(-1, nil, 0, -1)
     # don't start another search if last was more than 1/Xth the max time
-    @iterative_deepening_stop_ratio = 2.0
+    @iterative_deepening_stop_ratio = 2.5
     super()
   end
 
   def lookup_hash(hash, depth, alpha, beta)
     modulod_hash = hash % @size_of_table
-    #puts "Table:#{@transposition_table[modulod_hash]} Class:#{@transposition_table[modulod_hash].class} Nil?#{@transposition_table[modulod_hash] == nil}"
     if @transposition_table[modulod_hash] != nil
       table_hash = @transposition_table[modulod_hash]["hash"]
       if table_hash != hash
@@ -39,7 +39,14 @@ module NegamaxAnalysis
   end
 
   def store_hash(hash, depth, value, alpha, beta, flag)
-    @transposition_table[hash % @size_of_table] = { "hash" => hash, "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
+    modulod_hash = hash % @size_of_table
+    if @transposition_table[modulod_hash] != nil && @enable_limited_table_replacement
+      if @transposition_table[modulod_hash]["depth"] < depth
+        @transposition_table[modulod_hash] = { "hash" => hash, "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
+      end
+    else
+      @transposition_table[modulod_hash] = { "hash" => hash, "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
+    end
     #puts "Hash stored: #{hash}, entry: #{@transposition_table[hash]}, entire table:#{@transposition_table}"
   end
 
@@ -71,17 +78,22 @@ module NegamaxAnalysis
     current_depth = 0
     depth_best_move = nil
     start_time = Time.now
+    last_loop_start = Time.now
+    @recursion_counter = 0
     # repeatedly call negamax with increasing depth,
     # will return the best move found on the last level of depth called
-    while ( (Time.now - start_time) <= (time_limit/@iterative_deepening_stop_ratio) )
+    while ( (Time.now - last_loop_start) <= (time_limit/@iterative_deepening_stop_ratio) )
+      last_loop_start = Time.now
+      @recursion_counter = 0
       depth_best_move = @lowest_score
       subnode_best = negamax(board, active_piece, current_depth, alpha, beta)
-      puts "ID#{current_depth}: #{subnode_best}" if print_result
+      time_limit -= (Time.now - last_loop_start)
+      puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subnode_best}" if print_result
       if subnode_best.value > depth_best_move.value
         depth_best_move = process_subnode_and_move_into_node(subnode_best, subnode_best.move)
       end
       current_depth += 1
-      if current_depth > @deepening_depth_limit
+      if current_depth > @iterative_depth_limit
         return depth_best_move
       end
     end
@@ -161,9 +173,9 @@ module NegamaxAnalysis
     if @enable_transposition_tables
       # make a flag for the hash table indicating if it's an exact value
       flag = ""
-      if depth_best_move.value <= alpha.value
+      if depth_best_move.value < alpha.value
         flag = "Upper"
-      elsif depth_best_move.value >= beta.value
+      elsif depth_best_move.value > beta.value
         flag = "Lower"
       else
         flag = "Exact"
@@ -184,44 +196,29 @@ module NegamaxAnalysis
   end
 
   def sort_moves(list_of_moves, depth, hash_lookup_result)
-    if list_of_moves.delete(2)
-      list_of_moves.unshift(2)
-    end
-    if list_of_moves.delete(6)
-      list_of_moves.unshift(6)
-    end
-    if list_of_moves.delete(3)
-      list_of_moves.unshift(3)
-    end
-    if list_of_moves.delete(5)
-      list_of_moves.unshift(5)
-    end
-    if list_of_moves.delete(4)
-      list_of_moves.unshift(4)
+    list_of_moves = promote_move_to_front(list_of_moves, 2)
+    list_of_moves = promote_move_to_front(list_of_moves, 6)
+    list_of_moves = promote_move_to_front(list_of_moves, 3)
+    list_of_moves = promote_move_to_front(list_of_moves, 5)
+    list_of_moves = promote_move_to_front(list_of_moves, 4)
+    if @enable_killer_moves
+      if @killer_moves[0][depth] != nil
+        promote_move_to_front(list_of_moves, @killer_moves[0][depth].move)
+      end
+      if @killer_moves[1][depth] != nil
+        promote_move_to_front(list_of_moves, @killer_moves[1][depth].move)
+      end
     end
     if @enable_transposition_tables && hash_lookup_result
-      possible_move = hash_lookup_result
-      if list_of_moves.include?(possible_move.move)
-        list_of_moves.delete(possible_move.move)
-        list_of_moves.unshift(possible_move.move)
-        #puts "Found previous best move, shifting it"
-      end
+      promote_move_to_front(list_of_moves, hash_lookup_result.move)
     end
-    if @enable_killer_moves && @killer_moves[0][depth] != nil
-      possible_move = @killer_moves[0][depth]
-      if list_of_moves.include?(possible_move.move)
-        list_of_moves.delete(possible_move.move)
-        list_of_moves.unshift(possible_move.move)
-      end
-    end
-    if @enable_killer_moves && @killer_moves[1][depth] != nil
-      possible_move = @killer_moves[1][depth]
-      if list_of_moves.include?(possible_move.move)
-        list_of_moves.delete(possible_move.move)
-        list_of_moves.unshift(possible_move.move)
-      end
-    end
+    return list_of_moves
+  end
 
+  def promote_move_to_front(list_of_moves, possible_move)
+    if list_of_moves.delete(possible_move)
+      list_of_moves.unshift(possible_move)
+    end
     return list_of_moves
   end
 

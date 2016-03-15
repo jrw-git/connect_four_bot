@@ -38,7 +38,7 @@ class Player
     # if this is the first turn, always move in the center.
     return @first_move if board.turns <= 1
     #puts "Size of Transposition Table:#{@transposition_table.size}"
-    print_result = false
+    print_result = true
     start_time = Time.now
     case @brain_type
     when "MonteCarlo"
