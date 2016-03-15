@@ -22,12 +22,6 @@ class BotParser
     @settings = Hash.new
   end
 
-  def process_field_into_board(field)
-    board_array = field.split(";")
-    board = board_array.map { |string| string.split(",") }
-    return board
-  end
-
   def run
     # look for commands from the server
     while !$stdin.closed?
@@ -60,7 +54,7 @@ class BotParser
         when "round"
           @turn = instruction_array[3]
         when "field"
-          new_field = process_field_into_board(instruction_array[3])
+          new_field = GameBoard.process_string_into_board(instruction_array[3], @bot_id, @turn)
           @our_gameboard = GameBoard.new(@settings["field_rows"], @settings["field_columns"], @bot_id, @turn, new_field)
         else
           $stderr.puts "ERROR: Unknown update detected: #{instruction_array}"

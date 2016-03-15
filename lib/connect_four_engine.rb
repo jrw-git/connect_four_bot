@@ -14,7 +14,7 @@ class ConnectFourEngine
   @@bot_testing = false
   @@log_game_results = false
 
-  def initialize(p1, p2)
+  def initialize(p1, p2, new_board = GameBoard.new(@@board_height, @@board_width, p1) )
 
     if @@log_name != nil
       @log_enabled = true
@@ -24,9 +24,14 @@ class ConnectFourEngine
     else
       @log_enabled = false
     end
-    @board = GameBoard.new(@@board_height, @@board_width, p1)
-    @current_player = p1
-    @next_player = p2
+    @board = new_board
+    if @board.turns % 2 == 0
+      @current_player = p2
+      @next_player = p1
+    else
+      @current_player = p1
+      @next_player = p2
+    end
     puts @board.get_aigames_setup() + "\n" if @@bot_testing
   end
 
@@ -202,6 +207,19 @@ class ConnectFourEngine
     end
   end
 
+  def self.load_board
+    print "Load a board? (y/n): "
+    return nil if $stdin.gets.chomp != 'y'
+    print "Enter board sequence: "
+    new_field = $stdin.gets.chomp
+    print "Enter current player symbol: "
+    current_player = $stdin.gets.chomp
+    print "Enter turn: "
+    turn = $stdin.gets.chomp.to_i
+    board_array = GameBoard.process_string_into_board(new_field, current_player, turn)
+    return GameBoard.new(6, 7, current_player, turn, board_array)
+  end
+
 end
 
 ConnectFourEngine.print_intro
@@ -209,6 +227,12 @@ ConnectFourEngine.ask_user_about_bot_output
 ConnectFourEngine.ask_user_about_logging
 p1 = ConnectFourEngine.setup_player(GameBoard::PlayerOneSymbol)
 p2 = ConnectFourEngine.setup_player(GameBoard::PlayerTwoSymbol)
+new_board = ConnectFourEngine.load_board
+if new_board != nil
+  game = ConnectFourEngine.new(p1, p2, new_board)
+  game.run_game
+  exit
+end
 number_runs = 1000
 (1..number_runs).each do |x|
   connect_four_game = ConnectFourEngine.new(p1, p2)

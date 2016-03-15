@@ -31,6 +31,9 @@ module MonteCarloAnalysis
     return sorted_list
   end
 
+  # given a range of negamax results, I wanted monte carlo to only consider
+  # the best sets, because without doing this it would sometimes pick a losing move
+  # even when a winning or draw move was present
   def select_best_move_set(list_of_sorted_moves)
     winning_moves = list_of_sorted_moves.map { |node| node.move if node.value > 0 }.compact
     okay_moves = list_of_sorted_moves.map { |node| node.move if node.value == 0 }.compact
@@ -46,8 +49,12 @@ module MonteCarloAnalysis
     end
   end
 
+  # monte carlo plays out games repeatedly, randomly.
+  # it records the wins/plays of each move at the root
+  # we then pick the move with the highest winning percentage
+  # performance goes up dramatically with increased games simulated
+  # eg 2000 or so
   def monte_carlo_time_limited(board, list_of_moves, active_piece, time_limit, game_limit, print_result = false)
-    #begin monte carlo analysis
     start_time = Time.now
     hash_of_moves = Hash.new
     # form a list of moves with # of plays and # of wins attached
@@ -61,6 +68,7 @@ module MonteCarloAnalysis
       # make a copy of the game board to work with
       trial_move_board = board.dup if @try_board_dup
       trial_move_board = board if !@try_board_dup
+      # play a game out to the end and record the result
       result = simulate_monte_carlo_playout(trial_move_board, list_of_moves, active_piece)
       if result.value > 0
         hash_of_moves[result.move]["wins"] += 1

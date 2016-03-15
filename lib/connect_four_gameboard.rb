@@ -6,6 +6,14 @@ class GameBoard
   PlayerOneSymbol = '1'
   PlayerTwoSymbol = '2'
 
+  def self.process_string_into_board(string, current_player, current_turn)
+    # eg 0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,2,0,1,0,0,0;0,2,0,1,0,0,0
+    board_array = string.split(";")
+    new_board = board_array.map { |string| string.split(",") }
+    return new_board
+    #return GameBoard.new(6, 7, current_player, current_turn, new_board)
+  end
+
   def initialize(height, width, current_player, current_turn = 1, board_array = nil)
     @enable_win_check_optimization = true
     @all_neighbors_array = Array.new

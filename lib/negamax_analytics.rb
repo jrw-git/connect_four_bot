@@ -11,7 +11,7 @@ module NegamaxAnalysis
     @enable_alpha_beta = true
     @enable_move_sorting = true
     @fail_soft_enabled = true
-    @enable_heuristics = false # bugged due to win-check optimization
+    @enable_heuristics = false # bugged due to win-check optimization, takes forever anyway
     @size_of_table = 100000
 
     @iterative_depth_limit = 20
