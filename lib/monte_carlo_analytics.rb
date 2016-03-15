@@ -25,7 +25,7 @@ module MonteCarloAnalysis
       trial_move_board = board.dup
       trial_move_board.make_move(move, active_piece)
       subnode_best = -iterative_deepening_negamax_search(trial_move_board, board.change_players(active_piece), (time_limit/board.get_available_moves.size), @lowest_score, @highest_score, print_result)
-      sorted_list.push(process_subnode_and_move_into_node(subnode_best, move))
+      sorted_list.push(insert_move_into_results(subnode_best, move))
     end
     sorted_list.sort_by! { |object| object.value }
     return sorted_list

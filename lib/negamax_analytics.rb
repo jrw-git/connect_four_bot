@@ -5,11 +5,12 @@ module NegamaxAnalysis
 
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
-    @enable_transposition_tables = false
+    @enable_transposition_tables = true
     @enable_limited_table_replacement = false
     @enable_killer_moves = true
     @enable_alpha_beta = true
     @enable_move_sorting = true
+    @fail_soft_enabled = true
     @enable_heuristics = false # bugged due to win-check optimization
     @size_of_table = 100000
 
@@ -76,7 +77,7 @@ module NegamaxAnalysis
 
   def iterative_deepening_negamax_search(board, active_piece, time_limit, alpha, beta, print_result = false)
     current_depth = 0
-    depth_best_move = nil
+    alpha = nil
     start_time = Time.now
     last_loop_start = Time.now
     @recursion_counter = 0
@@ -85,20 +86,20 @@ module NegamaxAnalysis
     while ( (Time.now - last_loop_start) <= (time_limit/@iterative_deepening_stop_ratio) )
       last_loop_start = Time.now
       @recursion_counter = 0
-      depth_best_move = @lowest_score
+      alpha = @lowest_score
       subtree_best = negamax(board, active_piece, current_depth, alpha, beta)
       time_limit -= (Time.now - last_loop_start)
       puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subtree_best}" if print_result
-      if subtree_best.value > depth_best_move.value
-        depth_best_move = insert_move_into_results(subtree_best, subtree_best.move)
+      if subtree_best.value > alpha.value
+        alpha = insert_move_into_results(subtree_best, subtree_best.move)
       end
       current_depth += 1
       if current_depth > @iterative_depth_limit
-        return cut_node_value_by_half(depth_best_move)
+        break
       end
     end
-    #puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{depth_best_move} in #{(Time.now - start_time)} seconds."
-    return cut_node_value_by_half(depth_best_move)
+    #puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{alpha} in #{(Time.now - start_time)} seconds."
+    return cut_node_value_by_half(alpha)
   end
 
   def insert_move_into_results(subnode, move_into_subnode)
@@ -142,7 +143,7 @@ module NegamaxAnalysis
     # win/tie check, return a value if found
     result = check_board_for_final_square_value(board, active_piece, depth)
     return result unless result == nil
-    depth_best_move = @lowest_score
+    alpha = @lowest_score if !@enable_alpha_beta
     list_of_moves = board.get_available_moves
     # move sorting
     sort_moves(list_of_moves, depth, previous_best_move) if @enable_move_sorting
@@ -154,9 +155,16 @@ module NegamaxAnalysis
       subtree_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
       puts "M#{move}:#{subtree_best}" if print_result
       trial_move_board.undo_move
-      subtree_best = insert_move_into_results(subtree_best, move)
+      #subtree_best = insert_move_into_results(subtree_best, move)
+      if subtree_best.value > alpha.value
+        # new local alpha (best move) was found
+        #alpha = subtree_best
+        puts "New Local Best (Alpha) Found, Val:#{alpha.value}, subtreeVal:#{subtree_best.value}" if print_result
+        alpha = insert_move_into_results(subtree_best, move)
+      end
       # alpha beta (and killer moves)
       if subtree_best.value >= beta.value && @enable_alpha_beta
+        #puts "Beta break, beta val #{beta.value}, subtreeVal:#{subtree_best.value}" if depth > 4
         if @enable_killer_moves
           # storing two killer moves, but only if they are different than the move currently considered
           if subtree_best.move != @killer_moves[1][depth] && subtree_best.move != @killer_moves[0][depth]
@@ -166,29 +174,23 @@ module NegamaxAnalysis
         end
         # Beta cutoff, break out of this level with our alpha
         # returning best value would be "fail soft"
-        #break
-        # returning beta is "fail hard"...
-        new_beta = insert_move_into_results(beta, move)
-        return new_beta
+        break if @fail_soft_enabled
+        # returning beta is "fail hard"
+        alpha = beta if !@fail_soft_enabled
+        break if !@fail_soft_enabled
       end
-      if subtree_best.value > alpha.value && @enable_alpha_beta
-        # new local alpha was found
-        alpha = subtree_best
-      end
-
-
     end
     if @enable_transposition_tables
       # make a flag for the hash table indicating if it's an exact value
       flag = ""
-      if subtree_best.value <= alpha.value
+      if alpha.value <= @lowest_score.value
         flag = "Upper"
-      elsif subtree_best.value >= beta.value
+      elsif alpha.value >= beta.value
         flag = "Lower"
       else
         flag = "Exact"
       end
-      store_hash(hash, depth, subtree_best, alpha, beta, flag)
+      store_hash(hash, depth, alpha, alpha, beta, flag)
     end
     return cut_node_value_by_half(alpha)
   end

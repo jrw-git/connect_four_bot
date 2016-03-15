@@ -18,14 +18,11 @@ class GameBoard
       @board = board_array
     end
     @turns = current_turn.to_i
-    #@last_move = Hash.new
     @last_move_array = Array.new
     @current_player = current_player
-
     @hasher = ZobristHash.new
     @hash = @hasher.hash_entire_board(@board)
     @reversed_hash = nil
-
   end
 
   def initialize_dup(other)
@@ -75,8 +72,6 @@ class GameBoard
       end
       pre += pre_char
       post += post_char
-      #pre += get_piece((h-hs), (w-ws))
-      #post += get_piece((h+hs), (w+ws))
     end
     # was getting a hilarious bug because I didn't think through the pre + post sequencing. pre needs reversal.
     return pre.reverse + prev_move["player"] + post
@@ -98,7 +93,6 @@ class GameBoard
     results.push(find_last_move_neighbors(1, -1, depth))
     results.push(find_last_move_neighbors(-1, -1, depth))
     results.push(find_last_move_neighbors(1, 1, depth))
-    #@all_neighbors_array = results
     return results
   end
 
@@ -106,16 +100,12 @@ class GameBoard
     if @turns < 7
       return false
     end
-    #if @last_move["width"] == nil
-    #  return false
-    #end
     if @last_move_array.size <= 0
       return false
     end
     win = false
     @all_neighbors_array = get_all_neighbors(3)
     (0...@all_neighbors_array.size).each do |x|
-      #win = win || check_string_for_win(@last_player, @all_neighbors_array[x])
       win = win || check_string_for_win(@last_move_array[-1]["player"], @all_neighbors_array[x])
     end
     return win
@@ -135,22 +125,14 @@ class GameBoard
   end
 
   def place_piece(height, width, gamepiece)
-    #@last_move = {"height" => height, "width" => width}
     @last_move_array.push({"height" => height, "width" => width, "player" => gamepiece})
-    #@last_player = gamepiece
     @turns += 1
     @board[height][width] = gamepiece
     @hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
-    #@reversed_hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
-    #puts "Running Total Hash: #{@hash}"
-    #puts "Reversed Total Hash: #{@reversed_hash}"
-    #new_hash = @hasher.hash_entire_board(@board)
-    #puts "New Calc'd Hash: #{new_hash}"
   end
 
   def undo_move
     prev_move = @last_move_array.pop
-    #puts "Undo Move: Prev move:#{prev_move}"
     remove_piece(prev_move["height"], prev_move["width"], prev_move["player"])
   end
 
@@ -163,49 +145,35 @@ class GameBoard
     @hash = @hasher.hash_position_with_board(@hash, height, width, gamepiece, @board)
     @board[height][width] = DefaultSymbol
     @turns -= 1
-  #  @last_move = nil
-  #  @last_player = nil
   end
 
   def get_height_of_first_filled_location_in_column(column)
     (0...@height).each do |h|
-      if !(is_location_empty?(h, column-1))
-        return h
-      end
+      return h if !(is_location_empty?(h, column-1))
     end
     return 0
   end
 
   def get_height_of_first_empty_location_in_column(column)
+    top = @height - 1
     (0...@height).each do |height_index|
-      if is_location_empty?( (@height -1) - height_index, column-1)
-        return (@height - 1) - height_index
-      end
+      return top - height_index if is_location_empty?(top - height_index, column-1)
     end
   end
 
   def is_column_empty?(column)
-    if is_location_empty?(0, column-1)
-      return true
-    else
-      return false
-    end
+    return true if is_location_empty?(0, column-1)
+    return false
   end
 
   def is_location_empty?(h, w)
-    if get_piece(h, w) == DefaultSymbol
-      true
-    else
-      false
-    end
+    return true if get_piece(h, w) == DefaultSymbol
+    return false
   end
 
   def check_string_for_win(symbol, string)
-    if string.include?("#{symbol}#{symbol}#{symbol}#{symbol}")
-      return true
-    else
-      return false
-    end
+    return true if string.include?("#{symbol}#{symbol}#{symbol}#{symbol}")
+    return false
   end
 
   def is_there_a_tie?
