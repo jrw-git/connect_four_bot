@@ -5,7 +5,7 @@ module NegamaxAnalysis
 
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
-    @enable_transposition_tables = true
+    @enable_transposition_tables = false
     @enable_limited_table_replacement = false
     @enable_killer_moves = true
     @enable_alpha_beta = true
@@ -86,24 +86,29 @@ module NegamaxAnalysis
       last_loop_start = Time.now
       @recursion_counter = 0
       depth_best_move = @lowest_score
-      subnode_best = negamax(board, active_piece, current_depth, alpha, beta)
+      subtree_best = negamax(board, active_piece, current_depth, alpha, beta)
       time_limit -= (Time.now - last_loop_start)
-      puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subnode_best}" if print_result
-      if subnode_best.value > depth_best_move.value
-        depth_best_move = process_subnode_and_move_into_node(subnode_best, subnode_best.move)
+      puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subtree_best}" if print_result
+      if subtree_best.value > depth_best_move.value
+        depth_best_move = process_subnode_and_move_into_node(subtree_best, subtree_best.move)
       end
       current_depth += 1
       if current_depth > @iterative_depth_limit
-        return depth_best_move
+        return cut_node_value_by_half(depth_best_move)
       end
     end
     #puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{depth_best_move} in #{(Time.now - start_time)} seconds."
-    return depth_best_move
+    return cut_node_value_by_half(depth_best_move)
   end
 
   def process_subnode_and_move_into_node(subnode, move_into_subnode)
     # this is used to mark a move with the value of the move, was repeated all over
-    return Node.new(move_into_subnode, subnode.value/2.0, subnode.depth+1, subnode)
+    return Node.new(move_into_subnode, subnode.value, subnode.depth+1, subnode)
+  end
+
+  def cut_node_value_by_half(subnode)
+    # this is used to mark a move with the value of the move, was repeated all over
+    return Node.new(subnode.move, subnode.value/2.0, subnode.depth, subnode.subnode)
   end
 
   def negamax(board, active_piece, depth, alpha, beta, print_result = false)
@@ -146,14 +151,18 @@ module NegamaxAnalysis
       # we are making/undoing moves rather than duping the board, better performance
       trial_move_board = board
       trial_move_board.make_move(move, active_piece)
-      subnode_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
-      puts "M#{move}:#{subnode_best}" if print_result
+      subtree_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
+      puts "M#{move}:#{subtree_best}" if print_result
       trial_move_board.undo_move
       # looks like nil items make custom <=>'s go bonkers, switched to value comparison
-      if subnode_best.value > depth_best_move.value
-        depth_best_move = process_subnode_and_move_into_node(subnode_best, move)
+      if subtree_best.value > depth_best_move.value
+        depth_best_move = process_subnode_and_move_into_node(subtree_best, move)
       end
       # alpha beta (and killer moves)
+      if depth_best_move.value > alpha.value && @enable_alpha_beta
+        # new local alpha was found
+        alpha = depth_best_move
+      end
       if depth_best_move.value >= beta.value && @enable_alpha_beta
         if @enable_killer_moves
           # storing two killer moves, but only if they are different than the move currently considered
@@ -165,10 +174,7 @@ module NegamaxAnalysis
         # Beta cutoff, break out of this level
         break
       end
-      if depth_best_move.value > alpha.value && @enable_alpha_beta
-        # new local alpha was found
-        alpha = depth_best_move
-      end
+
     end
     if @enable_transposition_tables
       # make a flag for the hash table indicating if it's an exact value
@@ -182,7 +188,7 @@ module NegamaxAnalysis
       end
       store_hash(hash, depth, depth_best_move, alpha, beta, flag)
     end
-    return depth_best_move
+    return cut_node_value_by_half(depth_best_move)
   end
 
   def check_board_for_final_square_value(board, active_piece, depth)
