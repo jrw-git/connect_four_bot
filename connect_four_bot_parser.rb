@@ -33,8 +33,7 @@ class BotParser
         # 10000        500       player1,player2   player1   1        7    6
         @settings[instruction_array[1]] = instruction_array[2]
         if instruction_array[1] == "your_botid"
-          @search_limit = 0.7 #seconds
-          #@search_limit = 120 #seconds
+          @search_limit = 1.0 #seconds
           @aigames_io = true
           @brain = "IterativeNegamax"
           #@brain = "Mixed"
