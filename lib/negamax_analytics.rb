@@ -96,7 +96,7 @@ module NegamaxAnalysis
       alpha = @lowest_score
       subtree_best = negamax(board, active_piece, current_depth, alpha, beta)
       time_limit -= (Time.now - last_loop_start)
-      @io_stream.puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subtree_best}" if print_result
+      @io_stream.puts "Iterative Search Depth:#{current_depth}, Recursions:#{@recursion_counter}, Time Spent:#{(Time.now-last_loop_start).round(2)}, Time Left:#{(time_limit).round(2)}, Recs/Sec: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)}\nBest Move: #{subtree_best}\n" if print_result
       if subtree_best.value > alpha.value
         alpha = insert_move_into_results(subtree_best, subtree_best.move)
       end

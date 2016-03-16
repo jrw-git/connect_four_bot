@@ -57,9 +57,13 @@ class BotParser
         end
       when "action"
         # action move 10000   (10000 is timeleft)
-        @time_left = instruction_array[2]
+        @time_left = instruction_array[2].to_i
+        if @time_left < 2000
+          $stderr.puts "Less than 2 seconds left on the clock, reducing algorithm time limit!"
+          @our_bot.algorithm_limit = 0.5
+        end
         @our_move = @our_bot.make_a_move(@our_gameboard) - 1
-        $stdout.puts("place_disc #{@our_move}")
+        $stdout.puts "place_disc #{@our_move}"
       else
         $stderr.puts "ERROR: Unknown instruction detected: #{instruction_array}"
       end
