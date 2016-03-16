@@ -85,6 +85,7 @@ class GameBoard
     return pre.reverse + prev_move["player"] + post
   end
 
+  # used for heuristics... which don't work that well
   def get_cached_neighbors
     if @all_neighbors_array.size > 0
       return @all_neighbors_array

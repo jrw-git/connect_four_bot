@@ -5,12 +5,19 @@ module NegamaxAnalysis
 
   def initialize
     @killer_moves = Array.new(2) { Hash.new }
+    # currently an interesting bug shows up in a very specific config
+    #caused a bug in monte ai (as player 2)
+    #update game round 6
+    #update game field 0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,0,0,0,0;0,0,0,1,0,0,0;0,0,0,1,0,0,0;0,2,0,1,2,0,0
+    #action move 10000
+    # but only when played to this point by an mixed player 2 AI....
+    # and it's NOT caused by transposition_table
     @enable_transposition_tables = true
     @enable_limited_table_replacement = false
     @enable_killer_moves = true
     @enable_alpha_beta = true
     @enable_move_sorting = true
-    @fail_soft_enabled = true
+    @enable_fail_soft = true
     @enable_heuristics = false # bugged due to win-check optimization, takes forever anyway
     @size_of_table = 100000
 
@@ -31,7 +38,7 @@ module NegamaxAnalysis
     if @transposition_table[modulod_hash] != nil
       table_hash = @transposition_table[modulod_hash]["hash"]
       if table_hash != hash
-        #puts "Hash collision! Ourhash: #{hash} %(#{hash % @size_of_table}) TableHash:#{table_hash} %(#{table_hash % @size_of_table})"
+        #@io_stream.puts "Hash collision! Ourhash: #{hash} %(#{hash % @size_of_table}) TableHash:#{table_hash} %(#{table_hash % @size_of_table})"
         return nil
       end
       return @transposition_table[modulod_hash]
@@ -48,7 +55,7 @@ module NegamaxAnalysis
     else
       @transposition_table[modulod_hash] = { "hash" => hash, "depth" => depth, "value" => value, "alpha" => alpha.value, "beta" => beta.value, "flag" => flag}
     end
-    #puts "Hash stored: #{hash}, entry: #{@transposition_table[hash]}, entire table:#{@transposition_table}"
+    #@io_stream.puts "Hash stored: #{hash}, entry: #{@transposition_table[hash]}, entire table:#{@transposition_table}"
   end
 
   def heuristic_value(board, piece)
@@ -89,7 +96,7 @@ module NegamaxAnalysis
       alpha = @lowest_score
       subtree_best = negamax(board, active_piece, current_depth, alpha, beta)
       time_limit -= (Time.now - last_loop_start)
-      puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subtree_best}" if print_result
+      @io_stream.puts "ID:#{current_depth}, Rec:#{@recursion_counter}, Time:#{(Time.now-last_loop_start).round(2)}, TL:#{(time_limit).round(2)}, RPS: #{(@recursion_counter/(Time.now-last_loop_start)).round(2)} Move: #{subtree_best}" if print_result
       if subtree_best.value > alpha.value
         alpha = insert_move_into_results(subtree_best, subtree_best.move)
       end
@@ -98,7 +105,7 @@ module NegamaxAnalysis
         break
       end
     end
-    #puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{alpha} in #{(Time.now - start_time)} seconds."
+    #@io_stream.puts "Iterative deepening loop exiting at depth: #{current_depth-1} with move #{alpha} in #{(Time.now - start_time)} seconds."
     return cut_node_value_by_half(alpha)
   end
 
@@ -120,7 +127,7 @@ module NegamaxAnalysis
     if @enable_transposition_tables
       hash_lookup_result = lookup_hash(hash, depth, alpha, beta)
       if (hash_lookup_result != nil) &&  hash_lookup_result["depth"] >= depth
-        #puts "Got a valid position from table using zobrist hash"
+        #@io_stream.puts "Got a valid position from table using zobrist hash"
         flag = hash_lookup_result["flag"]
         previous_best_move = hash_lookup_result["value"]
         case flag
@@ -153,18 +160,16 @@ module NegamaxAnalysis
       trial_move_board = board
       trial_move_board.make_move(move, active_piece)
       subtree_best = -negamax(trial_move_board, trial_move_board.change_players(active_piece), depth-1, -beta, -alpha)
-      puts "M#{move}:#{subtree_best}" if print_result
+      @io_stream.puts "M#{move}:#{subtree_best}" if print_result
       trial_move_board.undo_move
-      #subtree_best = insert_move_into_results(subtree_best, move)
       if subtree_best.value > alpha.value
         # new local alpha (best move) was found
-        #alpha = subtree_best
-        puts "New Local Best (Alpha) Found, Val:#{alpha.value}, subtreeVal:#{subtree_best.value}" if print_result
+        @io_stream.puts "New Local Best (Alpha) Found, Val:#{alpha.value}, subtreeVal:#{subtree_best.value}" if print_result
         alpha = insert_move_into_results(subtree_best, move)
       end
       # alpha beta (and killer moves)
       if subtree_best.value >= beta.value && @enable_alpha_beta
-        #puts "Beta break, beta val #{beta.value}, subtreeVal:#{subtree_best.value}" if depth > 4
+        #@io_stream.puts "Beta break, beta val #{beta.value}, subtreeVal:#{subtree_best.value}" if depth > 4
         if @enable_killer_moves
           # storing two killer moves, but only if they are different than the move currently considered
           if subtree_best.move != @killer_moves[1][depth] && subtree_best.move != @killer_moves[0][depth]
@@ -174,10 +179,10 @@ module NegamaxAnalysis
         end
         # Beta cutoff, break out of this level with our alpha
         # returning best value would be "fail soft"
-        break if @fail_soft_enabled
+        break if @enable_fail_soft
         # returning beta is "fail hard"
-        alpha = beta if !@fail_soft_enabled
-        break if !@fail_soft_enabled
+        alpha = beta if !@enable_fail_soft
+        break if !@enable_fail_soft
       end
     end
     if @enable_transposition_tables

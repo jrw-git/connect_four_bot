@@ -5,12 +5,8 @@
 # connect 4
 # written by John White 2016
 
-#require_relative "./lib/connect_four_engine"
-#require "./lib/connect_four_gameboard"
 require_relative "lib/connect_four_gameboard"
-#require "./lib/node"
 require_relative "lib/node"
-#require "./lib/ai_player"
 require_relative "lib/ai_player"
 
 STDOUT.sync = true
@@ -40,11 +36,12 @@ class BotParser
           @search_limit = 0.7 #seconds
           #@search_limit = 120 #seconds
           @aigames_io = true
-          @brain = "Mixed"
+          @brain = "IterativeNegamax"
+          #@brain = "Mixed"
           @bot_id = @settings["your_botid"]
           @bot_name = "AI:#{@brain}-#{@search_limit}-#{@bot_id}."
           @our_bot = Player.new(@bot_name, @bot_id, @brain, @search_limit, @aigames_io)
-          $stderr.puts "Bot name: #{@bot_name}, ID: #{@bot_id}"
+          $stderr.puts "Bot setup finished, name: #{@bot_name}"
           $stderr.puts @our_bot
         end
       when "update" # don't forget the "game" in the instruction line

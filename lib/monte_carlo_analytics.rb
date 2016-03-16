@@ -39,12 +39,12 @@ module MonteCarloAnalysis
     okay_moves = list_of_sorted_moves.map { |node| node.move if node.value == 0 }.compact
     losing_moves = list_of_sorted_moves.map { |node| node.move if node.value < 0 }.compact
     if winning_moves.size > 0
-      puts "Winning moves seen:#{winning_moves}"
+      @io_stream.puts "Winning moves seen:#{winning_moves}"
       return winning_moves
     elsif okay_moves.size > 0
       return okay_moves
     else
-      puts "Losing moves seen:#{losing_moves}"
+      @io_stream.puts "Losing moves seen:#{losing_moves}"
       return losing_moves
     end
   end
@@ -78,10 +78,10 @@ module MonteCarloAnalysis
     # rank moves
     sorted = get_best_monte_carlo_result(hash_of_moves)
     if print_result
-      puts "Monte Carlo Results:"
-      hash_of_moves.each { |x, move | puts "Move#{x}: #{move}" }
+      @io_stream.puts "Monte Carlo Results:"
+      hash_of_moves.each { |x, move | @io_stream.puts "Move#{x}: #{move}" }
     end
-    puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
+    @io_stream.puts "Monte Carlo games: #{recursion_counter} in #{Time.now - start_time} seconds, bestM:#{sorted.move} bestV:#{sorted.value}"
     return sorted
   end
 
