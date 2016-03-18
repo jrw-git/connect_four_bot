@@ -12,7 +12,7 @@ module NegamaxAnalysis
     #action move 10000
     # but only when played to this point by an mixed player 2 AI....
     # and it's NOT caused by transposition_table
-    @enable_transposition_tables = true
+    @enable_transposition_tables = false
     @enable_limited_table_replacement = false
     @enable_killer_moves = true
     @enable_alpha_beta = true
