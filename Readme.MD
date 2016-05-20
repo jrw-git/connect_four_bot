@@ -2,6 +2,8 @@
 #### Written in Ruby. Works locally and as a bot for theaigames.com
 
 ###### This is a text based game/bot. There is no graphical interface.
+###### Flaws in this code: No unit testing, poor class separation with players
+###### Also could have all interfaces thought out more clearly
 
 ### Release 1.0.1: https://github.com/jrw-git/connect_four_bot/releases/latest
 
